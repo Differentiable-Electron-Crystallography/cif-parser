@@ -1,0 +1,338 @@
+//! WebAssembly bindings for the CIF parser.
+//!
+//! This module provides JavaScript-compatible wrappers around the core CIF parsing
+//! functionality, using wasm-bindgen for seamless interop with JavaScript.
+
+use wasm_bindgen::prelude::*;
+use serde::{Deserialize, Serialize};
+use crate::{CifDocument, CifBlock, CifLoop, CifValue, CifFrame};
+
+// Console logging for debugging
+#[wasm_bindgen]
+extern "C" {
+    #[wasm_bindgen(js_namespace = console)]
+    fn log(s: &str);
+}
+
+macro_rules! console_log {
+    ($($t:tt)*) => (log(&format_args!($($t)*).to_string()))
+}
+
+/// JavaScript-compatible representation of a CIF value
+#[wasm_bindgen]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct JsCifValue {
+    value_type: String,
+    text_value: Option<String>,
+    numeric_value: Option<f64>,
+}
+
+#[wasm_bindgen]
+impl JsCifValue {
+    /// Get the type of this value as a string
+    #[wasm_bindgen(getter)]
+    pub fn value_type(&self) -> String {
+        self.value_type.clone()
+    }
+
+    /// Get the text value (if this is a text value)
+    #[wasm_bindgen(getter)]
+    pub fn text_value(&self) -> Option<String> {
+        self.text_value.clone()
+    }
+
+    /// Get the numeric value (if this is a numeric value)
+    #[wasm_bindgen(getter)]
+    pub fn numeric_value(&self) -> Option<f64> {
+        self.numeric_value
+    }
+
+    /// Check if this is a text value
+    #[wasm_bindgen]
+    pub fn is_text(&self) -> bool {
+        self.value_type == "Text"
+    }
+
+    /// Check if this is a numeric value
+    #[wasm_bindgen]
+    pub fn is_numeric(&self) -> bool {
+        self.value_type == "Numeric"
+    }
+
+    /// Check if this is an unknown value (?)
+    #[wasm_bindgen]
+    pub fn is_unknown(&self) -> bool {
+        self.value_type == "Unknown"
+    }
+
+    /// Check if this is a not-applicable value (.)
+    #[wasm_bindgen]
+    pub fn is_not_applicable(&self) -> bool {
+        self.value_type == "NotApplicable"
+    }
+}
+
+impl From<&CifValue> for JsCifValue {
+    fn from(value: &CifValue) -> Self {
+        match value {
+            CifValue::Text(s) => JsCifValue {
+                value_type: "Text".to_string(),
+                text_value: Some(s.clone()),
+                numeric_value: None,
+            },
+            CifValue::Numeric(n) => JsCifValue {
+                value_type: "Numeric".to_string(),
+                text_value: None,
+                numeric_value: Some(*n),
+            },
+            CifValue::Unknown => JsCifValue {
+                value_type: "Unknown".to_string(),
+                text_value: None,
+                numeric_value: None,
+            },
+            CifValue::NotApplicable => JsCifValue {
+                value_type: "NotApplicable".to_string(),
+                text_value: None,
+                numeric_value: None,
+            },
+        }
+    }
+}
+
+/// JavaScript-compatible representation of a CIF loop
+#[wasm_bindgen]
+pub struct JsCifLoop {
+    inner: CifLoop,
+}
+
+#[wasm_bindgen]
+impl JsCifLoop {
+    /// Get the tag names (column headers)
+    #[wasm_bindgen]
+    pub fn get_tags(&self) -> Vec<String> {
+        self.inner.tags.clone()
+    }
+
+    /// Get the number of rows
+    #[wasm_bindgen]
+    pub fn get_row_count(&self) -> usize {
+        self.inner.len()
+    }
+
+    /// Get the number of columns
+    #[wasm_bindgen]
+    pub fn get_column_count(&self) -> usize {
+        self.inner.tags.len()
+    }
+
+    /// Get a value by row and column index
+    #[wasm_bindgen]
+    pub fn get_value(&self, row: usize, col: usize) -> Option<JsCifValue> {
+        self.inner.get(row, col).map(|v| v.into())
+    }
+
+    /// Get a value by row index and tag name
+    #[wasm_bindgen]
+    pub fn get_value_by_tag(&self, row: usize, tag: &str) -> Option<JsCifValue> {
+        self.inner.get_by_tag(row, tag).map(|v| v.into())
+    }
+
+    /// Get all values for a specific tag as JSON
+    #[wasm_bindgen]
+    pub fn get_column(&self, tag: &str) -> Option<String> {
+        self.inner.get_column(tag).map(|values| {
+            let js_values: Vec<JsCifValue> = values.iter().map(|v| (*v).into()).collect();
+            serde_json::to_string(&js_values).unwrap_or_default()
+        })
+    }
+}
+
+impl From<CifLoop> for JsCifLoop {
+    fn from(loop_: CifLoop) -> Self {
+        JsCifLoop { inner: loop_ }
+    }
+}
+
+/// JavaScript-compatible representation of a CIF frame
+#[wasm_bindgen]
+pub struct JsCifFrame {
+    inner: CifFrame,
+}
+
+#[wasm_bindgen]
+impl JsCifFrame {
+    /// Get the frame name
+    #[wasm_bindgen(getter)]
+    pub fn name(&self) -> String {
+        self.inner.name.clone()
+    }
+
+    /// Get all item keys
+    #[wasm_bindgen]
+    pub fn get_item_keys(&self) -> Vec<String> {
+        self.inner.items.keys().cloned().collect()
+    }
+
+    /// Get an item value by key
+    #[wasm_bindgen]
+    pub fn get_item(&self, key: &str) -> Option<JsCifValue> {
+        self.inner.items.get(key).map(|v| v.into())
+    }
+
+    /// Get the number of loops in this frame
+    #[wasm_bindgen]
+    pub fn get_loop_count(&self) -> usize {
+        self.inner.loops.len()
+    }
+
+    /// Get a loop by index
+    #[wasm_bindgen]
+    pub fn get_loop(&self, index: usize) -> Option<JsCifLoop> {
+        self.inner.loops.get(index).cloned().map(|l| l.into())
+    }
+}
+
+impl From<CifFrame> for JsCifFrame {
+    fn from(frame: CifFrame) -> Self {
+        JsCifFrame { inner: frame }
+    }
+}
+
+/// JavaScript-compatible representation of a CIF block
+#[wasm_bindgen]
+pub struct JsCifBlock {
+    inner: CifBlock,
+}
+
+#[wasm_bindgen]
+impl JsCifBlock {
+    /// Get the block name
+    #[wasm_bindgen(getter)]
+    pub fn name(&self) -> String {
+        self.inner.name.clone()
+    }
+
+    /// Get all item keys
+    #[wasm_bindgen]
+    pub fn get_item_keys(&self) -> Vec<String> {
+        self.inner.items.keys().cloned().collect()
+    }
+
+    /// Get an item value by key
+    #[wasm_bindgen]
+    pub fn get_item(&self, key: &str) -> Option<JsCifValue> {
+        self.inner.items.get(key).map(|v| v.into())
+    }
+
+    /// Get the number of loops in this block
+    #[wasm_bindgen]
+    pub fn get_loop_count(&self) -> usize {
+        self.inner.loops.len()
+    }
+
+    /// Get a loop by index
+    #[wasm_bindgen]
+    pub fn get_loop(&self, index: usize) -> Option<JsCifLoop> {
+        self.inner.loops.get(index).cloned().map(|l| l.into())
+    }
+
+    /// Find a loop containing a specific tag
+    #[wasm_bindgen]
+    pub fn find_loop(&self, tag: &str) -> Option<JsCifLoop> {
+        self.inner.find_loop(tag).cloned().map(|l| l.into())
+    }
+
+    /// Get the number of frames in this block
+    #[wasm_bindgen]
+    pub fn get_frame_count(&self) -> usize {
+        self.inner.frames.len()
+    }
+
+    /// Get a frame by index
+    #[wasm_bindgen]
+    pub fn get_frame(&self, index: usize) -> Option<JsCifFrame> {
+        self.inner.frames.get(index).cloned().map(|f| f.into())
+    }
+}
+
+impl From<CifBlock> for JsCifBlock {
+    fn from(block: CifBlock) -> Self {
+        JsCifBlock { inner: block }
+    }
+}
+
+/// JavaScript-compatible representation of a CIF document
+#[wasm_bindgen]
+pub struct JsCifDocument {
+    inner: CifDocument,
+}
+
+#[wasm_bindgen]
+impl JsCifDocument {
+    /// Parse a CIF string and return a document
+    #[wasm_bindgen]
+    pub fn parse(input: &str) -> Result<JsCifDocument, String> {
+        console_log!("Parsing CIF content of length: {}", input.len());
+        
+        match CifDocument::parse(input) {
+            Ok(doc) => {
+                console_log!("Successfully parsed {} blocks", doc.blocks.len());
+                Ok(JsCifDocument { inner: doc })
+            }
+            Err(e) => {
+                let error_msg = format!("CIF parsing error: {}", e);
+                console_log!("{}", error_msg);
+                Err(error_msg)
+            }
+        }
+    }
+
+    /// Get the number of blocks
+    #[wasm_bindgen]
+    pub fn get_block_count(&self) -> usize {
+        self.inner.blocks.len()
+    }
+
+    /// Get a block by index
+    #[wasm_bindgen]
+    pub fn get_block(&self, index: usize) -> Option<JsCifBlock> {
+        self.inner.blocks.get(index).cloned().map(|b| b.into())
+    }
+
+    /// Get a block by name
+    #[wasm_bindgen]
+    pub fn get_block_by_name(&self, name: &str) -> Option<JsCifBlock> {
+        self.inner.get_block(name).cloned().map(|b| b.into())
+    }
+
+    /// Get the first block (common for single-block CIF files)
+    #[wasm_bindgen]
+    pub fn get_first_block(&self) -> Option<JsCifBlock> {
+        self.inner.first_block().cloned().map(|b| b.into())
+    }
+
+    /// Get all block names
+    #[wasm_bindgen]
+    pub fn get_block_names(&self) -> Vec<String> {
+        self.inner.blocks.iter().map(|b| b.name.clone()).collect()
+    }
+}
+
+/// Initialize the WASM module (optional, for any setup needed)
+#[wasm_bindgen(start)]
+pub fn main() {
+    console_log!("CIF Parser WASM module initialized");
+}
+
+/// Get the version of the CIF parser
+#[wasm_bindgen]
+pub fn get_version() -> String {
+    env!("CARGO_PKG_VERSION").to_string()
+}
+
+/// Simple test function to verify WASM is working
+#[wasm_bindgen]
+pub fn test_wasm() -> String {
+    console_log!("WASM test function called");
+    "CIF Parser WASM module is working!".to_string()
+}

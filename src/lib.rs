@@ -110,6 +110,14 @@ use std::fmt;
 use std::fs;
 use std::path::Path;
 
+// WASM bindings module (conditionally compiled)
+#[cfg(target_arch = "wasm32")]
+pub mod wasm;
+
+// Python bindings module (conditionally compiled)
+#[cfg(feature = "python")]
+pub mod python;
+
 #[derive(Parser)]
 #[grammar = "cif.pest"]
 pub struct CIFParser;
