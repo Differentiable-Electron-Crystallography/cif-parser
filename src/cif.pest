@@ -136,8 +136,20 @@ doublequoted = { "\"" ~ (!endq_double ~ !"\n" ~ ANY)* ~ endq_double }
 // A "text field" is a character string starting with a semicolon character ;
 // as the first character of a line.
 // Production: <TextField> ::= <semicolon><eol>{{<AnyPrintChar>}*<eol>}*<semicolon>
-field_sep = { SOI | "\n" ~ ";" }
-textfield = { field_sep ~ (!field_sep ~ ANY)* ~ field_sep }
+//
+// FIXED: Rewrote textfield rule to properly handle text fields in document context.
+// The previous field_sep-based implementation failed when text fields appeared 
+// within data blocks because field_sep required SOI (start of input) or \n;, 
+// but couldn't match the ending semicolon correctly in document parsing.
+// 
+// New implementation directly matches:
+// - ";" followed by newline, content (until \n; or EOI), newline, ";" OR
+// - ";" followed by content (until \n; or EOI), newline, ";"
+// This handles both multi-line text fields and single-line text fields correctly.
+textfield = { 
+    (";" ~ "\n" ~ (!(("\n" ~ ";") | EOI) ~ ANY)* ~ "\n" ~ ";") |
+    (";" ~ (!(("\n" ~ ";") | EOI) ~ ANY)* ~ "\n" ~ ";")
+}
 
 // Paragraph 20: Unquoted string
 // An unquoted string is a contiguous string of non-white-space characters, which
