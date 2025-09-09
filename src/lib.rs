@@ -68,7 +68,7 @@
 //!
 //! let doc = Document::parse(cif_content)?;
 //! let block = doc.first_block().unwrap();
-//! 
+//!
 //! assert_eq!(block.name, "example");
 //! assert_eq!(block.get_item("_cell_length_a").unwrap().as_numeric(), Some(10.0));
 //! # Ok::<(), CifError>(())
@@ -95,7 +95,7 @@
 //!
 //! assert_eq!(loop_.len(), 3); // 3 rows
 //! assert_eq!(loop_.tags.len(), 3); // 3 columns
-//! 
+//!
 //! // Access by row and tag name
 //! let atom_type = loop_.get_by_tag(0, "_atom_site_type_symbol").unwrap();
 //! assert_eq!(atom_type.as_string().unwrap(), "C");
@@ -321,7 +321,7 @@ impl CifValue {
 /// tabular data with named columns (tags) and multiple rows of values.
 ///
 /// # Structure
-/// 
+///
 /// ```text
 /// loop_
 /// _atom_site_label          # Column 1
@@ -342,16 +342,16 @@ impl CifValue {
 ///
 /// ```
 /// use cif_parser::Document;
-/// 
+///
 /// # let cif = "data_test\nloop_\n_col1\n_col2\nval1 val2\nval3 val4\n";
 /// # let doc = Document::parse(cif).unwrap();
 /// # let loop_ = &doc.blocks[0].loops[0];
 /// // By position
 /// let value = loop_.get(0, 1);  // Row 0, Column 1
-/// 
+///
 /// // By tag name  
 /// let value = loop_.get_by_tag(0, "_col2");  // Row 0, "_col2" column
-/// 
+///
 /// // Get entire column
 /// let column = loop_.get_column("_col1");
 /// ```
@@ -413,11 +413,11 @@ impl CifLoop {
 /// data items and loops. They're bounded by `save_name` and `save_` keywords.
 ///
 /// # Structure
-/// 
+///
 /// ```text
 /// data_main
 /// _main_item value
-/// 
+///
 /// save_frame1
 /// _frame_item1 value1  
 /// _frame_item2 value2
@@ -428,7 +428,7 @@ impl CifLoop {
 /// ```
 ///
 /// # Use Cases
-/// 
+///
 /// Save frames are commonly used for:
 /// - Grouping related molecular fragments
 /// - Storing restraint definitions
@@ -436,7 +436,7 @@ impl CifLoop {
 /// - Creating reusable data templates
 ///
 /// # Relationship to Data Blocks
-/// 
+///
 /// Save frames are contained within data blocks and can contain the same
 /// types of content (data items and loops) but cannot contain other save frames.
 #[derive(Debug, Clone)]
@@ -460,24 +460,24 @@ pub struct CifFrame {
 /// - **Global blocks**: `global_` - contain data applying to subsequent blocks
 ///
 /// # Structure
-/// 
+///
 /// ```text
 /// data_example           # Block name is "example"
 /// _item1 value1         # Data items (key-value pairs)
 /// _item2 'quoted value'
-/// 
+///
 /// loop_                 # Tabular data
 /// _col1 _col2
 /// val1  val2
 /// val3  val4
-/// 
+///
 /// save_frame1           # Named sub-containers
 /// _frame_item value
 /// save_
 /// ```
 ///
 /// # Block Names
-/// 
+///
 /// Block names are extracted from the header:
 /// - `data_protein` → name is `"protein"`
 /// - `DATA_STRUCTURE` → name is `"STRUCTURE"` (case-insensitive parsing)
@@ -487,16 +487,16 @@ pub struct CifFrame {
 ///
 /// ```
 /// use cif_parser::Document;
-/// 
+///
 /// # let cif = "data_test\n_item value\n";
 /// # let doc = Document::parse(cif).unwrap();
 /// # let block = doc.first_block().unwrap();
 /// // Get data items
 /// let value = block.get_item("_item");
-/// 
+///
 /// // Find loops containing specific tags
 /// let loop_ = block.find_loop("_atom_site_label");
-/// 
+///
 /// // Get all loop tags
 /// let all_tags = block.get_loop_tags();
 /// ```
@@ -661,16 +661,16 @@ impl BlockBuilder {
 /// multiple data blocks, each with its own data, loops, and save frames.
 ///
 /// # Structure
-/// 
+///
 /// ```text
 /// # Comments and whitespace (ignored)
-/// 
+///
 /// data_first             # First data block  
 /// _item1 value1
-/// 
+///
 /// global_                # Global block (applies to subsequent blocks)
 /// _global_setting value
-/// 
+///
 /// data_second            # Second data block
 /// _item2 value2
 /// ```
@@ -681,7 +681,7 @@ impl BlockBuilder {
 /// use cif_parser::{Document, CifError};
 ///
 /// let cif_content = "data_structure\n_item value\n";
-/// 
+///
 /// // Parse from string
 /// let doc = Document::parse(cif_content)?;
 ///
@@ -689,17 +689,17 @@ impl BlockBuilder {
 /// let first = doc.first_block().unwrap();           // First block
 /// let named = doc.get_block("structure").unwrap();  // Block by name
 /// let all_blocks = &doc.blocks;                     // All blocks
-/// 
+///
 /// # Ok::<(), CifError>(())
 /// ```
 ///
 /// # Multi-block Files
-/// 
+///
 /// Many CIF files contain multiple structures or datasets:
 /// ```text
 /// data_structure1
 /// _cell_length_a 10.0
-/// 
+///
 /// data_structure2  
 /// _cell_length_a 15.0
 /// ```
@@ -755,18 +755,18 @@ impl CifDocument {
     /// Extract block name from a data block heading with case-insensitive parsing.
     ///
     /// # CIF Block Naming Rules
-    /// 
+    ///
     /// - `data_name` → `"name"`
     /// - `DATA_NAME` → `"NAME"` (preserves original case of the name part)
     /// - `global_` → `""` (empty string, as global blocks have no name)
-    /// 
+    ///
     /// # Case Sensitivity
-    /// 
+    ///
     /// The keywords (`data_`, `global_`) are case-insensitive per CIF specification,
     /// but the name part preserves its original casing. This means:
     /// - `DATA_MyProtein` → `"MyProtein"`
     /// - `data_MyProtein` → `"MyProtein"`
-    /// 
+    ///
     /// # Examples
     /// ```ignore
     /// // This method is private, shown for documentation only
@@ -855,7 +855,7 @@ impl CifDocument {
 
         if tag.is_empty() {
             return Err(CifError::InvalidStructure(
-                "Data item missing tag".to_string()
+                "Data item missing tag".to_string(),
             ));
         }
 
@@ -865,19 +865,19 @@ impl CifDocument {
     /// Parse a loop structure from the parse tree.
     ///
     /// # Loop Structure Validation
-    /// 
+    ///
     /// Loops must have:
     /// 1. At least one tag (column header)
     /// 2. Values count divisible by tag count (complete rows)
     /// 3. Each value must be parseable as a [`CifValue`]
     ///
     /// # Error Conditions
-    /// 
+    ///
     /// - [`CifError::InvalidStructure`]: No tags found
     /// - [`CifError::InvalidStructure`]: Values don't align with tags (wrong count)
     ///
     /// # Empty Loops
-    /// 
+    ///
     /// Loops with tags but no values are valid (represents an empty table).
     fn parse_loop(pair: Pair<Rule>) -> Result<CifLoop, CifError> {
         let mut loop_ = CifLoop::new();
@@ -904,7 +904,7 @@ impl CifDocument {
         // Validate and organize into rows
         if loop_.tags.is_empty() {
             return Err(CifError::InvalidStructure(
-                "Loop block has no tags".to_string()
+                "Loop block has no tags".to_string(),
             ));
         }
 
@@ -929,21 +929,21 @@ impl CifDocument {
     /// Organize values into rows based on tag count.
     ///
     /// # Algorithm
-    /// 
+    ///
     /// Values in CIF loops are stored sequentially and must be organized into
     /// rows based on the number of tags (columns):
-    /// 
+    ///
     /// ```text
     /// Tags: [_col1, _col2, _col3]     # 3 columns
     /// Values: [v1, v2, v3, v4, v5, v6] # 6 values
-    /// 
+    ///
     /// Result:
     /// Row 0: [v1, v2, v3]
     /// Row 1: [v4, v5, v6]
     /// ```
     ///
     /// # Validation
-    /// 
+    ///
     /// - Total values must be divisible by tag count
     /// - Empty loops (0 values) are valid
     /// - Partial rows are rejected with [`CifError::InvalidStructure`]
@@ -996,7 +996,7 @@ impl CifDocument {
 
         if frame.name.is_empty() {
             return Err(CifError::InvalidStructure(
-                "Save frame missing name".to_string()
+                "Save frame missing name".to_string(),
             ));
         }
 

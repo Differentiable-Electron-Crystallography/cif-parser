@@ -3,9 +3,9 @@
 //! This module provides JavaScript-compatible wrappers around the core CIF parsing
 //! functionality, using wasm-bindgen for seamless interop with JavaScript.
 
-use wasm_bindgen::prelude::*;
+use crate::{CifBlock, CifDocument, CifFrame, CifLoop, CifValue};
 use serde::{Deserialize, Serialize};
-use crate::{CifDocument, CifBlock, CifLoop, CifValue, CifFrame};
+use wasm_bindgen::prelude::*;
 
 // Console logging for debugging
 #[wasm_bindgen]
@@ -273,7 +273,7 @@ impl JsCifDocument {
     #[wasm_bindgen]
     pub fn parse(input: &str) -> Result<JsCifDocument, String> {
         console_log!("Parsing CIF content of length: {}", input.len());
-        
+
         match CifDocument::parse(input) {
             Ok(doc) => {
                 console_log!("Successfully parsed {} blocks", doc.blocks.len());

@@ -3,18 +3,20 @@
 //! This module provides Python-native wrappers around the core CIF parsing
 //! functionality, following Python naming conventions and idioms.
 
+use crate::{CifBlock, CifDocument, CifError, CifFrame, CifLoop, CifValue};
+use pyo3::exceptions::{PyIOError, PyValueError};
 use pyo3::prelude::*;
-use pyo3::exceptions::{PyValueError, PyIOError};
-use pyo3::types::{PyList, PyDict, PyString};
+use pyo3::types::{PyDict, PyList, PyString};
 use std::collections::HashMap;
-use crate::{CifDocument, CifBlock, CifLoop, CifValue, CifFrame, CifError};
 
 /// Convert a Rust CifError to a Python exception
 fn cif_error_to_py_err(err: CifError) -> PyErr {
     match err {
         CifError::ParseError(msg) => PyValueError::new_err(format!("Parse error: {}", msg)),
         CifError::IoError(err) => PyIOError::new_err(format!("IO error: {}", err)),
-        CifError::InvalidStructure(msg) => PyValueError::new_err(format!("Invalid CIF structure: {}", msg)),
+        CifError::InvalidStructure(msg) => {
+            PyValueError::new_err(format!("Invalid CIF structure: {}", msg))
+        }
     }
 }
 
@@ -154,16 +156,18 @@ impl PyLoop {
 
     /// Get all values for a specific tag as a list
     fn get_column(&self, tag: &str) -> Option<Vec<PyValue>> {
-        self.inner.get_column(tag).map(|values| {
-            values.iter().map(|v| (*v).clone().into()).collect()
-        })
+        self.inner
+            .get_column(tag)
+            .map(|values| values.iter().map(|v| (*v).clone().into()).collect())
     }
 
     /// Iterate over rows
     fn rows(&self) -> Vec<Vec<PyValue>> {
-        self.inner.values.iter().map(|row| {
-            row.iter().map(|v| v.clone().into()).collect()
-        }).collect()
+        self.inner
+            .values
+            .iter()
+            .map(|row| row.iter().map(|v| v.clone().into()).collect())
+            .collect()
     }
 
     /// Get a row as a dictionary mapping tags to values
@@ -171,7 +175,7 @@ impl PyLoop {
         if row >= self.inner.len() {
             return None;
         }
-        
+
         let mut result = HashMap::new();
         for (col, tag) in self.inner.tags.iter().enumerate() {
             if let Some(value) = self.inner.get(row, col) {
@@ -195,12 +199,20 @@ impl PyLoop {
 
     /// String representation
     fn __str__(&self) -> String {
-        format!("Loop({} columns, {} rows)", self.inner.tags.len(), self.inner.len())
+        format!(
+            "Loop({} columns, {} rows)",
+            self.inner.tags.len(),
+            self.inner.len()
+        )
     }
 
     /// Debug representation
     fn __repr__(&self) -> String {
-        format!("Loop(tags={:?}, rows={})", self.inner.tags, self.inner.len())
+        format!(
+            "Loop(tags={:?}, rows={})",
+            self.inner.tags,
+            self.inner.len()
+        )
     }
 }
 
@@ -238,7 +250,9 @@ impl PyFrame {
 
     /// Get all items as a dictionary
     fn items(&self) -> HashMap<String, PyValue> {
-        self.inner.items.iter()
+        self.inner
+            .items
+            .iter()
             .map(|(k, v)| (k.clone(), v.clone().into()))
             .collect()
     }
@@ -262,14 +276,22 @@ impl PyFrame {
 
     /// String representation
     fn __str__(&self) -> String {
-        format!("Frame('{}', {} items, {} loops)", 
-                self.inner.name, self.inner.items.len(), self.inner.loops.len())
+        format!(
+            "Frame('{}', {} items, {} loops)",
+            self.inner.name,
+            self.inner.items.len(),
+            self.inner.loops.len()
+        )
     }
 
     /// Debug representation
     fn __repr__(&self) -> String {
-        format!("Frame(name='{}', items={}, loops={})", 
-                self.inner.name, self.inner.items.len(), self.inner.loops.len())
+        format!(
+            "Frame(name='{}', items={}, loops={})",
+            self.inner.name,
+            self.inner.items.len(),
+            self.inner.loops.len()
+        )
     }
 }
 
@@ -307,7 +329,9 @@ impl PyBlock {
 
     /// Get all items as a dictionary
     fn items(&self) -> HashMap<String, PyValue> {
-        self.inner.items.iter()
+        self.inner
+            .items
+            .iter()
             .map(|(k, v)| (k.clone(), v.clone().into()))
             .collect()
     }
@@ -358,16 +382,24 @@ impl PyBlock {
 
     /// String representation
     fn __str__(&self) -> String {
-        format!("Block('{}', {} items, {} loops, {} frames)", 
-                self.inner.name, self.inner.items.len(), 
-                self.inner.loops.len(), self.inner.frames.len())
+        format!(
+            "Block('{}', {} items, {} loops, {} frames)",
+            self.inner.name,
+            self.inner.items.len(),
+            self.inner.loops.len(),
+            self.inner.frames.len()
+        )
     }
 
     /// Debug representation
     fn __repr__(&self) -> String {
-        format!("Block(name='{}', items={}, loops={}, frames={})", 
-                self.inner.name, self.inner.items.len(), 
-                self.inner.loops.len(), self.inner.frames.len())
+        format!(
+            "Block(name='{}', items={}, loops={}, frames={})",
+            self.inner.name,
+            self.inner.items.len(),
+            self.inner.loops.len(),
+            self.inner.frames.len()
+        )
     }
 }
 
@@ -436,20 +468,23 @@ impl PyDocument {
 
     /// Python iterator protocol
     fn __iter__(slf: PyRef<'_, Self>) -> PyDocumentIterator {
-        PyDocumentIterator { 
-            doc: slf.clone(), 
-            index: 0 
+        PyDocumentIterator {
+            doc: slf.clone(),
+            index: 0,
         }
     }
 
     /// Python getitem protocol (allows doc[0], doc["name"])
     fn __getitem__(&self, key: &PyAny) -> PyResult<PyBlock> {
         if let Ok(index) = key.extract::<usize>() {
-            self.inner.blocks.get(index)
+            self.inner
+                .blocks
+                .get(index)
                 .map(|b| b.clone().into())
                 .ok_or_else(|| PyValueError::new_err("Block index out of range"))
         } else if let Ok(name) = key.extract::<String>() {
-            self.inner.get_block(&name)
+            self.inner
+                .get_block(&name)
                 .map(|b| b.clone().into())
                 .ok_or_else(|| PyValueError::new_err(format!("Block '{}' not found", name)))
         } else {
@@ -481,7 +516,7 @@ impl PyDocumentIterator {
     fn __iter__(slf: PyRef<'_, Self>) -> PyRef<'_, Self> {
         slf
     }
-    
+
     fn __next__(&mut self) -> Option<PyBlock> {
         if self.index < self.doc.inner.blocks.len() {
             let block = self.doc.inner.blocks[self.index].clone().into();
@@ -506,12 +541,12 @@ fn _cif_parser(py: Python, m: &PyModule) -> PyResult<()> {
     // Convenience functions
     m.add_function(wrap_pyfunction!(parse, m)?)?;
     m.add_function(wrap_pyfunction!(parse_file, m)?)?;
-    
+
     // Module metadata
     m.add("__version__", env!("CARGO_PKG_VERSION"))?;
     m.add("__author__", "Iain Maitland")?;
     m.add("__doc__", "CIF (Crystallographic Information File) parser")?;
-    
+
     Ok(())
 }
 
