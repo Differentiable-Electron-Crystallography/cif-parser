@@ -6,7 +6,7 @@
 use crate::{CifBlock, CifDocument, CifError, CifFrame, CifLoop, CifValue};
 use pyo3::exceptions::{PyIOError, PyValueError};
 use pyo3::prelude::*;
-use pyo3::types::{PyDict, PyList, PyString};
+use pyo3::types::PyString;
 use std::collections::HashMap;
 
 /// Convert a Rust CifError to a Python exception
@@ -77,10 +77,10 @@ impl PyValue {
     }
 
     /// Convert to Python native type
-    fn to_python(&self, py: Python) -> PyResult<PyObject> {
+    fn to_python(&self, py: Python) -> PyResult<Py<PyAny>> {
         match &self.inner {
-            CifValue::Text(s) => Ok(PyString::new(py, s).into()),
-            CifValue::Numeric(n) => Ok(n.to_object(py)),
+            CifValue::Text(s) => Ok(PyString::new(py, s).into_any().unbind()),
+            CifValue::Numeric(n) => Ok(n.into_pyobject(py)?.into_any().unbind()),
             CifValue::Unknown => Ok(py.None()),
             CifValue::NotApplicable => Ok(py.None()),
         }
@@ -475,7 +475,7 @@ impl PyDocument {
     }
 
     /// Python getitem protocol (allows doc[0], doc["name"])
-    fn __getitem__(&self, key: &PyAny) -> PyResult<PyBlock> {
+    fn __getitem__(&self, key: &Bound<'_, PyAny>) -> PyResult<PyBlock> {
         if let Ok(index) = key.extract::<usize>() {
             self.inner
                 .blocks
@@ -530,7 +530,7 @@ impl PyDocumentIterator {
 
 /// Module initialization function
 #[pymodule]
-fn _cif_parser(py: Python, m: &PyModule) -> PyResult<()> {
+fn _cif_parser(_py: Python, m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PyDocument>()?;
     m.add_class::<PyDocumentIterator>()?;
     m.add_class::<PyBlock>()?;

@@ -181,10 +181,10 @@ impl From<pest::error::Error<Rule>> for CifError {
 /// use cif_parser::CifValue;
 ///
 /// // Different ways values are parsed
-/// assert_eq!(CifValue::from_str("123.45"), CifValue::Numeric(123.45));
-/// assert_eq!(CifValue::from_str("'hello'"), CifValue::Text("hello".to_string()));
-/// assert_eq!(CifValue::from_str("?"), CifValue::Unknown);
-/// assert_eq!(CifValue::from_str("."), CifValue::NotApplicable);
+/// assert_eq!(CifValue::parse_value("123.45"), CifValue::Numeric(123.45));
+/// assert_eq!(CifValue::parse_value("'hello'"), CifValue::Text("hello".to_string()));
+/// assert_eq!(CifValue::parse_value("?"), CifValue::Unknown);
+/// assert_eq!(CifValue::parse_value("."), CifValue::NotApplicable);
 /// ```
 ///
 /// # Text Fields
@@ -220,11 +220,11 @@ impl CifValue {
     /// ```
     /// use cif_parser::CifValue;
     ///
-    /// assert_eq!(CifValue::from_str("42"), CifValue::Numeric(42.0));
-    /// assert_eq!(CifValue::from_str("'text'"), CifValue::Text("text".to_string()));
-    /// assert_eq!(CifValue::from_str("?"), CifValue::Unknown);
+    /// assert_eq!(CifValue::parse_value("42"), CifValue::Numeric(42.0));
+    /// assert_eq!(CifValue::parse_value("'text'"), CifValue::Text("text".to_string()));
+    /// assert_eq!(CifValue::parse_value("?"), CifValue::Unknown);
     /// ```
-    pub fn from_str(s: &str) -> Self {
+    pub fn parse_value(s: &str) -> Self {
         let trimmed = s.trim();
 
         // Check for special values first
@@ -238,7 +238,18 @@ impl CifValue {
         // Try to parse as number, otherwise treat as text
         Self::parse_numeric_or_text(content)
     }
+}
 
+// Implement standard FromStr trait
+impl std::str::FromStr for CifValue {
+    type Err = std::convert::Infallible; // This method never fails
+    
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(Self::parse_value(s))
+    }
+}
+
+impl CifValue {
     /// Check for CIF special values (`?` for unknown, `.` for not applicable).
     ///
     /// These values have special meaning in CIF and must be detected before
@@ -368,6 +379,12 @@ pub struct CifLoop {
     pub tags: Vec<String>,
     /// Data organized as rows, each containing one value per tag
     pub values: Vec<Vec<CifValue>>,
+}
+
+impl Default for CifLoop {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl CifLoop {
@@ -711,6 +728,12 @@ pub struct CifDocument {
     pub blocks: Vec<CifBlock>,
 }
 
+impl Default for CifDocument {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl CifDocument {
     /// Create a new empty document
     pub fn new() -> Self {
@@ -723,11 +746,8 @@ impl CifDocument {
         let mut doc = CifDocument::new();
 
         for pair in pairs {
-            match pair.as_rule() {
-                Rule::file => {
-                    doc = Self::parse_file(pair)?;
-                }
-                _ => {}
+            if pair.as_rule() == Rule::file {
+                doc = Self::parse_file(pair)?;
             }
         }
 
@@ -789,16 +809,13 @@ impl CifDocument {
         let mut doc = CifDocument::new();
 
         for inner_pair in pair.into_inner() {
-            match inner_pair.as_rule() {
-                Rule::content => {
-                    for content_pair in inner_pair.into_inner() {
-                        if content_pair.as_rule() == Rule::datablock {
-                            let block = Self::parse_datablock(content_pair)?;
-                            doc.blocks.push(block);
-                        }
+            if inner_pair.as_rule() == Rule::content {
+                for content_pair in inner_pair.into_inner() {
+                    if content_pair.as_rule() == Rule::datablock {
+                        let block = Self::parse_datablock(content_pair)?;
+                        doc.blocks.push(block);
                     }
                 }
-                _ => {}
             }
         }
 
@@ -845,7 +862,7 @@ impl CifDocument {
                     tag = inner_pair.as_str().to_string();
                 }
                 Rule::item_value | Rule::value => {
-                    value = CifValue::from_str(inner_pair.as_str());
+                    value = CifValue::parse_value(inner_pair.as_str());
                 }
                 _ => {
                     // Ignore other rules
@@ -893,7 +910,7 @@ impl CifDocument {
                     Self::collect_loop_values(inner_pair, &mut values);
                 }
                 Rule::loop_value | Rule::value => {
-                    values.push(CifValue::from_str(inner_pair.as_str()));
+                    values.push(CifValue::parse_value(inner_pair.as_str()));
                 }
                 _ => {
                     // Ignore other rules
@@ -917,7 +934,7 @@ impl CifDocument {
         for value_pair in pair.into_inner() {
             match value_pair.as_rule() {
                 Rule::loop_value | Rule::value => {
-                    values.push(CifValue::from_str(value_pair.as_str()));
+                    values.push(CifValue::parse_value(value_pair.as_str()));
                 }
                 _ => {
                     // Ignore other rules
