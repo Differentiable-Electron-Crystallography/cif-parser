@@ -863,6 +863,27 @@ The library provides detailed error messages for:
 
 Contributions are welcome! Please feel free to submit issues or pull requests.
 
+### Setting up Git Hooks
+
+This project includes pre-commit hooks that run the same checks as our CI pipeline. To install them:
+
+```bash
+# Install the git hooks (run from project root)
+./install-hooks.sh
+```
+
+The pre-commit hook will automatically:
+- Check code formatting with `cargo fmt`
+- Run linting with `cargo clippy`
+- Build the project
+- Run all tests
+- Build documentation
+
+To bypass the hooks temporarily (not recommended), use:
+```bash
+git commit --no-verify
+```
+
 ## License
 
 Licensed under either of

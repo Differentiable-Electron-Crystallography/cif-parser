@@ -133,9 +133,9 @@ pub enum CifError {
 impl fmt::Display for CifError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            CifError::ParseError(msg) => write!(f, "Parse error: {}", msg),
-            CifError::IoError(err) => write!(f, "IO error: {}", err),
-            CifError::InvalidStructure(msg) => write!(f, "Invalid CIF structure: {}", msg),
+            CifError::ParseError(msg) => write!(f, "Parse error: {msg}"),
+            CifError::IoError(err) => write!(f, "IO error: {err}"),
+            CifError::InvalidStructure(msg) => write!(f, "Invalid CIF structure: {msg}"),
         }
     }
 }
@@ -150,7 +150,7 @@ impl From<std::io::Error> for CifError {
 
 impl From<pest::error::Error<Rule>> for CifError {
     fn from(err: pest::error::Error<Rule>) -> Self {
-        CifError::ParseError(format!("{}", err))
+        CifError::ParseError(format!("{err}"))
     }
 }
 
@@ -243,7 +243,7 @@ impl CifValue {
 // Implement standard FromStr trait
 impl std::str::FromStr for CifValue {
     type Err = std::convert::Infallible; // This method never fails
-    
+
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         Ok(Self::parse_value(s))
     }

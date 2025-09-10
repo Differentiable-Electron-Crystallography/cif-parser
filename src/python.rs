@@ -12,10 +12,10 @@ use std::collections::HashMap;
 /// Convert a Rust CifError to a Python exception
 fn cif_error_to_py_err(err: CifError) -> PyErr {
     match err {
-        CifError::ParseError(msg) => PyValueError::new_err(format!("Parse error: {}", msg)),
-        CifError::IoError(err) => PyIOError::new_err(format!("IO error: {}", err)),
+        CifError::ParseError(msg) => PyValueError::new_err(format!("Parse error: {msg}")),
+        CifError::IoError(err) => PyIOError::new_err(format!("IO error: {err}")),
         CifError::InvalidStructure(msg) => {
-            PyValueError::new_err(format!("Invalid CIF structure: {}", msg))
+            PyValueError::new_err(format!("Invalid CIF structure: {msg}"))
         }
     }
 }
@@ -89,7 +89,7 @@ impl PyValue {
     /// String representation
     fn __str__(&self) -> String {
         match &self.inner {
-            CifValue::Text(s) => format!("'{}'", s),
+            CifValue::Text(s) => format!("'{s}'"),
             CifValue::Numeric(n) => n.to_string(),
             CifValue::Unknown => "?".to_string(),
             CifValue::NotApplicable => ".".to_string(),
@@ -486,7 +486,7 @@ impl PyDocument {
             self.inner
                 .get_block(&name)
                 .map(|b| b.clone().into())
-                .ok_or_else(|| PyValueError::new_err(format!("Block '{}' not found", name)))
+                .ok_or_else(|| PyValueError::new_err(format!("Block '{name}' not found")))
         } else {
             Err(PyValueError::new_err("Block key must be int or str"))
         }
@@ -500,7 +500,7 @@ impl PyDocument {
     /// Debug representation
     fn __repr__(&self) -> String {
         let names: Vec<&str> = self.inner.blocks.iter().map(|b| b.name.as_str()).collect();
-        format!("Document(blocks={:?})", names)
+        format!("Document(blocks={names:?})")
     }
 }
 
