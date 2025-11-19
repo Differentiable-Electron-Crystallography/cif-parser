@@ -23,6 +23,16 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
+echo "  🧪 Running Rust tests..."
+# Note: We don't use --all-features here because the 'python' feature
+# requires PyO3's extension-module, which can't be tested with cargo test.
+# Python bindings are tested separately below.
+cargo test --quiet
+if [ $? -ne 0 ]; then
+    echo "  ❌ Tests failed. Please fix them before committing."
+    exit 1
+fi
+
 # Python Checks
 if [ -d "python" ]; then
     echo "🐍 Running Python checks..."
@@ -47,6 +57,13 @@ if [ -d "python" ]; then
         echo "  ❌ Mypy found type errors. Please fix them before committing."
         exit 1
     fi
+
+    echo "  🧪 Running Python tests..."
+    (cd python && uv run pytest tests/ -q)
+    if [ $? -ne 0 ]; then
+        echo "  ❌ Python tests failed. Please fix them before committing."
+        exit 1
+    fi
 fi
 
 # JavaScript Checks
@@ -64,11 +81,20 @@ if [ -d "javascript" ] && [ -f "javascript/package.json" ]; then
             echo "  ❌ Biome found issues. Run 'cd javascript && npx @biomejs/biome check --write .' to fix."
             exit 1
         fi
+
+        # Check if WASM package is built
+        if [ -d "pkg-node" ]; then
+            echo "  🧪 Running JavaScript tests..."
+            (cd javascript && npx mocha tests/basic.test.js --reporter min)
+            if [ $? -ne 0 ]; then
+                echo "  ❌ JavaScript tests failed. Please fix them before committing."
+                exit 1
+            fi
+        else
+            echo "  ⚠️  Warning: WASM package not built. Run 'wasm-pack build --target nodejs --out-dir pkg-node' first."
+            echo "  Skipping JavaScript tests..."
+        fi
     fi
 fi
 
-echo "✅ All formatting and linting checks passed!"
-echo ""
-echo "💡 Tip: The build and tests will run in CI. To run them locally:"
-echo "   cargo build --all-features"
-echo "   cargo test --all-features"
+echo "✅ All checks passed! Your code is ready to commit."
