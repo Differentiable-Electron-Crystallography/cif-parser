@@ -8,7 +8,6 @@
 # ============================================================================
 # Configuration
 # ============================================================================
-set shell := ["bash", "-cu"]
 
 # Variables
 python_dir := "python"
@@ -169,17 +168,6 @@ build-all: rust-build python-build wasm-build-all
 # ============================================================================
 # Development & Utilities
 # ============================================================================
-
-# Clean all build artifacts
-clean:
-    cargo clean
-    rm -rf {{python_dir}}/target
-    rm -rf {{js_dir}}/pkg-node {{js_dir}}/pkg {{js_dir}}/pkg-bundler
-    find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
-    find . -type d -name ".pytest_cache" -exec rm -rf {} + 2>/dev/null || true
-    find . -type d -name ".mypy_cache" -exec rm -rf {} + 2>/dev/null || true
-    find . -type d -name ".ruff_cache" -exec rm -rf {} + 2>/dev/null || true
-    @echo "✅ Cleaned all build artifacts"
 
 # Install/setup all dependencies
 setup:
