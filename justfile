@@ -77,8 +77,12 @@ python-typecheck:
 python-test:
     cd {{python_dir}} && uv run pytest tests/ -q
 
+# Clean Python build artifacts and compiled extensions
+python-clean:
+    python -c "import pathlib; [p.unlink() for pattern in ['*.so', '*.pyd', '*.dll'] for p in pathlib.Path('{{python_dir}}/cif_parser').glob(pattern) if p.exists()]"
+
 # Build Python package with maturin
-python-build:
+python-build: python-clean
     cd {{python_dir}} && uv run maturin build --release
 
 # Check all Python code (format, lint, typecheck, test)

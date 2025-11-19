@@ -16,7 +16,11 @@
 __pycache__/
 *.py[cod]
 *$py.class
+# Compiled Python extensions (*.so for Unix/macOS, *.pyd/*.dll for Windows)
+# Excluded to ensure maturin builds don't fail from duplicate files in the wheel
 *.so
+*.pyd
+*.dll
 
 # Virtual environments
 .env
