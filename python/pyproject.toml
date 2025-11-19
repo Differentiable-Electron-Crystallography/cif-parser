@@ -9,7 +9,7 @@ authors = [
     {name = "Iain Maitland", email = "iain@iainmaitland.com"}
 ]
 license = {text = "MIT OR Apache-2.0"}
-readme = "README.md"
+readme = "../README.md"
 homepage = "https://github.com/Differentiable-Electron-Crystallography/cif-parser"
 repository = "https://github.com/Differentiable-Electron-Crystallography/cif-parser"
 documentation = "https://docs.rs/cif-parser"
@@ -40,15 +40,16 @@ Documentation = "https://docs.rs/cif-parser"
 "Bug Reports" = "https://github.com/Differentiable-Electron-Crystallography/cif-parser/issues"
 
 [project.optional-dependencies]
-dev = ["pytest>=6.0", "pytest-benchmark", "mypy", "black", "ruff"]
+dev = ["pytest>=6.0", "pytest-benchmark", "mypy", "black", "ruff", "maturin>=1.0"]
 
 [tool.maturin]
 features = ["pyo3/extension-module", "python"]
-python-source = "python"
+python-source = "."
 module-name = "cif_parser._cif_parser"
+manifest-path = "../Cargo.toml"
 
 [tool.mypy]
-python_version = "3.8"
+python_version = "3.9"
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = true

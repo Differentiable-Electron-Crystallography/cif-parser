@@ -1,0 +1,44 @@
+{
+  "name": "@cif-parser/core",
+  "version": "0.1.0",
+  "description": "Fast CIF (Crystallographic Information File) parser compiled to WebAssembly",
+  "author": "Iain Maitland <iain@iainmaitland.com>",
+  "license": "MIT OR Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Differentiable-Electron-Crystallography/cif-parser.git"
+  },
+  "homepage": "https://github.com/Differentiable-Electron-Crystallography/cif-parser",
+  "bugs": {
+    "url": "https://github.com/Differentiable-Electron-Crystallography/cif-parser/issues"
+  },
+  "keywords": [
+    "cif",
+    "crystallography",
+    "parser",
+    "mmcif",
+    "pdbx",
+    "wasm",
+    "webassembly",
+    "rust"
+  ],
+  "scripts": {
+    "build": "wasm-pack build --target web --out-dir javascript/pkg",
+    "build:node": "wasm-pack build --target nodejs --out-dir javascript/pkg-node",
+    "build:bundler": "wasm-pack build --target bundler --out-dir javascript/pkg-bundler",
+    "build:all": "npm run build && npm run build:node && npm run build:bundler",
+    "test": "wasm-pack test --headless --firefox",
+    "test:node": "wasm-pack test --node"
+  },
+  "files": [
+    "pkg/**/*",
+    "pkg-node/**/*",
+    "pkg-bundler/**/*",
+    "README.md",
+    "LICENSE-MIT",
+    "LICENSE-APACHE"
+  ],
+  "devDependencies": {
+    "@types/node": "^20.0.0"
+  }
+}

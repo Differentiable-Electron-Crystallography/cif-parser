@@ -366,16 +366,16 @@ if block:
 uv tool install maturin
 
 # Build in development mode (faster, includes debug info)
-maturin develop --features python
+cd python && maturin develop
 
 # Build optimized wheel for distribution
-maturin build --features python --release
+cd python && maturin build --release
 
 # Test the installation
 source .venv/bin/activate && python python_example.py
 
 # Run tests
-python -m pytest tests/
+cd python && python -m pytest tests/
 
 # Type checking
 mypy python/cif_parser/
@@ -383,6 +383,24 @@ mypy python/cif_parser/
 # Linting and formatting
 ruff check python/
 black python/
+```
+
+## Project Structure
+
+```
+cif-parser/
+├── src/                          # Core Rust library
+│   ├── lib.rs                   # Main library
+│   ├── python.rs                # Python bindings (PyO3)
+│   └── wasm.rs                  # WebAssembly bindings
+├── python/                       # Python package (self-contained)
+│   ├── pyproject.toml           # Python packaging config
+│   ├── cif_parser/              # Pure Python wrapper
+│   └── tests/                   # Python tests
+└── javascript/                   # JavaScript/WASM package (self-contained)
+    ├── package.json             # NPM package config
+    ├── examples/                # Usage examples
+    └── tests/                   # JavaScript tests
 ```
 
 ## Building from Source
@@ -406,10 +424,10 @@ cargo build --release
 pip install maturin
 
 # Build and install in development mode
-maturin develop --features python
+cd python && maturin develop
 
 # Or build wheels for distribution
-maturin build --features python --release
+cd python && maturin build --release
 ```
 
 **WebAssembly packages:**
@@ -418,13 +436,13 @@ maturin build --features python --release
 curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
 
 # Build for web browsers
-wasm-pack build --target web --out-dir pkg
+wasm-pack build --target web --out-dir javascript/pkg
 
 # Build for Node.js
-wasm-pack build --target nodejs --out-dir pkg-node
+wasm-pack build --target nodejs --out-dir javascript/pkg-node
 
 # Build for bundlers (webpack, etc.)
-wasm-pack build --target bundler --out-dir pkg-bundler
+wasm-pack build --target bundler --out-dir javascript/pkg-bundler
 ```
 
 ### Running Examples
@@ -438,22 +456,22 @@ cargo run --example basic_usage
 
 **Python example:**
 ```bash
-# After: maturin develop --features python
+# After: cd python && maturin develop
 python python_example.py
 ```
 
 **Node.js example:**
 ```bash
-# After: wasm-pack build --target nodejs --out-dir pkg-node
-node node-example.js
+# After: wasm-pack build --target nodejs --out-dir javascript/pkg-node
+node javascript/examples/node-example.js
 ```
 
 **Web example:**
 ```bash
-# After: wasm-pack build --target web --out-dir pkg
-# Serve wasm-demo.html with any HTTP server:
+# After: wasm-pack build --target web --out-dir javascript/pkg
+# Serve the examples directory with any HTTP server:
 python -m http.server 8000
-# Open http://localhost:8000/wasm-demo.html
+# Open http://localhost:8000/javascript/examples/browser-basic.html
 ```
 
 ## WebAssembly (WASM) Usage
@@ -472,14 +490,16 @@ curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
 
 ```bash
 # Build for web browsers
-wasm-pack build --target web --out-dir pkg
+wasm-pack build --target web --out-dir javascript/pkg
 
 # Build for Node.js
-wasm-pack build --target nodejs --out-dir pkg-node
+wasm-pack build --target nodejs --out-dir javascript/pkg-node
 
 # Build for bundlers (webpack, etc.)
-wasm-pack build --target bundler --out-dir pkg-bundler
+wasm-pack build --target bundler --out-dir javascript/pkg-bundler
 ```
+
+For detailed JavaScript/TypeScript usage, examples, and API reference, see [javascript/README.md](javascript/README.md).
 
 ### JavaScript/TypeScript Usage
 
@@ -496,7 +516,7 @@ After building, you can use the CIF parser in your JavaScript/TypeScript project
 </head>
 <body>
     <script type="module">
-        import init, { JsCifDocument } from './pkg/cif_parser.js';
+        import init, { parse } from './javascript/pkg/cif_parser.js';
         
         async function run() {
             // Initialize the WASM module
@@ -516,7 +536,7 @@ After building, you can use the CIF parser in your JavaScript/TypeScript project
             `;
             
             try {
-                const doc = JsCifDocument.parse(cifContent);
+                const doc = parse(cifContent);
                 console.log(`Parsed ${doc.get_block_count()} blocks`);
                 
                 const block = doc.get_first_block();
@@ -553,7 +573,7 @@ After building, you can use the CIF parser in your JavaScript/TypeScript project
 #### With Node.js
 
 ```javascript
-const { JsCifDocument } = require('./pkg-node/cif_parser.js');
+const { parse } = require('./javascript/pkg-node/cif_parser.js');
 
 const cifContent = `
     data_example
@@ -562,7 +582,7 @@ const cifContent = `
 `;
 
 try {
-    const doc = JsCifDocument.parse(cifContent);
+    const doc = parse(cifContent);
     const block = doc.get_first_block();
     
     console.log('Block name:', block.name);
@@ -579,45 +599,44 @@ try {
 #### With Webpack/Bundlers
 
 ```typescript
-import init, { JsCifDocument } from 'cif-parser';
+import init, { parse } from '@cif-parser/core';
 
 async function parseCif(content: string) {
     await init();
-    
-    const doc = JsCifDocument.parse(content);
+    const doc = parse(content);
     return doc;
 }
 ```
 
 ### WASM API Reference
 
-The WebAssembly API provides JavaScript-friendly wrappers:
+The WebAssembly API provides JavaScript-friendly wrappers with both property getters (modern API) and method aliases (compatibility).
+
+**Module Functions:**
+- `parse(content: string): JsCifDocument` - Parse CIF content (convenience function)
+- `version(): string` - Get library version
 
 #### `JsCifDocument`
-- `static parse(content: string): JsCifDocument` - Parse CIF content
-- `get_block_count(): number` - Number of data blocks
+- **Properties**: `blockCount`, `blockNames`
+- `parse(content: string): JsCifDocument` - Static: parse CIF content
 - `get_block(index: number): JsCifBlock | undefined` - Get block by index
 - `get_block_by_name(name: string): JsCifBlock | undefined` - Get block by name
-- `get_first_block(): JsCifBlock | undefined` - Get first block
-- `get_block_names(): string[]` - Get all block names
+- `first_block(): JsCifBlock | undefined` - Get first block
 
 #### `JsCifBlock`
-- `name: string` - Block name
-- `get_item_keys(): string[]` - All data item keys
+- **Properties**: `name`, `itemKeys`, `numLoops`, `numFrames`
 - `get_item(key: string): JsCifValue | undefined` - Get data item
-- `get_loop_count(): number` - Number of loops
 - `get_loop(index: number): JsCifLoop | undefined` - Get loop by index
 - `find_loop(tag: string): JsCifLoop | undefined` - Find loop containing tag
-- `get_frame_count(): number` - Number of save frames
+- `get_loop_tags(): string[]` - Get all loop tags
 - `get_frame(index: number): JsCifFrame | undefined` - Get save frame
 
 #### `JsCifLoop`
-- `get_tags(): string[]` - Column headers
-- `get_row_count(): number` - Number of rows
-- `get_column_count(): number` - Number of columns
+- **Properties**: `tags`, `numRows`, `numColumns`
 - `get_value(row: number, col: number): JsCifValue | undefined` - Get value by position
 - `get_value_by_tag(row: number, tag: string): JsCifValue | undefined` - Get value by tag
-- `get_column(tag: string): string | undefined` - Get entire column as JSON
+- `get_column(tag: string): JsCifValue[] | undefined` - Get entire column as array
+- `get_row_dict(row: number): object` - Get row as JavaScript object
 
 #### `JsCifValue`
 - `value_type: string` - "Text", "Numeric", "Unknown", or "NotApplicable"
@@ -641,24 +660,25 @@ The WebAssembly API provides JavaScript-friendly wrappers:
 After building with `wasm-pack`, you'll get:
 
 ```
-pkg/                          # Web browser package
-├── cif_parser.js            # JavaScript bindings
-├── cif_parser.d.ts          # TypeScript definitions
-├── cif_parser_bg.wasm       # Compiled WebAssembly binary
-├── cif_parser_bg.wasm.d.ts  # WASM type definitions
-└── package.json             # NPM package metadata
+javascript/pkg/                   # Web browser package
+├── cif_parser.js                # JavaScript bindings
+├── cif_parser.d.ts              # TypeScript definitions
+├── cif_parser_bg.wasm           # Compiled WebAssembly binary
+├── cif_parser_bg.wasm.d.ts      # WASM type definitions
+└── package.json                 # NPM package metadata
 
-pkg-node/                    # Node.js package (CommonJS)
-pkg-bundler/                 # Bundler package (webpack, etc.)
+javascript/pkg-node/             # Node.js package (CommonJS)
+javascript/pkg-bundler/          # Bundler package (webpack, etc.)
 ```
 
 ### Live Examples
 
-This repository includes working examples:
+This repository includes working examples in `javascript/examples/`:
 
-- **`wasm-demo.html`** - Interactive web demo with full parsing visualization
+- **`browser-basic.html`** - Interactive web demo with full parsing visualization
 - **`node-example.js`** - Complete Node.js usage example with detailed output
-- **Examples in README** - Copy-paste ready code snippets
+- **`typescript-example.ts`** - TypeScript example showing full type safety
+- See [javascript/README.md](javascript/README.md) for more details
 
 ### Performance Considerations
 

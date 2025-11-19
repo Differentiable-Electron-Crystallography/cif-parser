@@ -1,6 +1,6 @@
 // CIF 1.1 Grammar in Pest PEG format
 // Based on: https://www.iucr.org/resources/cif/spec/version1.1/cifsyntax
-// Extracted from gemmi/cif.hpp and mapped to CIF 1.1 formal productions
+// Paragraphs refer to formal grammar's defined at the URL.
 
 // ===== PART 1: BASIC CHARACTER SETS =====
 // Reference: Table 2.2.7.1 - Printable character set
@@ -226,8 +226,7 @@ loop_values = {
 // of data names, preceded by the reserved case-insensitive word loop_
 // Production: <Loop> ::= <loop> {<Tag> <WhiteSpace>}+ <LoopBody>
 loop_block = {
-    str_loop ~ whitespace ~ (loop_tag ~ whitespace)+ ~ (loop_values | &(keyword | EOI) // handle incorrect empty loop
-  ) ~ loop_end
+    str_loop ~ whitespace ~ (loop_tag ~ whitespace)+ ~ (loop_values | &(keyword | EOI)) ~ loop_end
 }
 
 // Paragraph 30: Save frame
@@ -238,7 +237,7 @@ frame = {
 }
 
 // Paragraph 27: Data block
-// A "data block" is a logical grouping of data items and save frames
+// A "data block" is a logical grouping of data items, save frames and loops
 // Production: <DataBlock> ::= <DataBlockHeading> {<WhiteSpace> {<DataItem>|<SaveFrame>|<Loop>}}*
 datablock = {
     datablockheading ~ ws_or_eof ~ (dataitem | loop_block | frame)*

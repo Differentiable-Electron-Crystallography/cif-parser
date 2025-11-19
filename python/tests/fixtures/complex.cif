@@ -1,0 +1,33 @@
+data_block1
+_entry_id 'complex_test'
+_cell_length_a 10.5
+_cell_length_b 10.5
+_cell_length_c 15.2
+
+save_frame1
+_frame_category 'restraints'
+_frame_id 'frame1'
+_restraint_type 'distance'
+loop_
+_restraint_atom1
+_restraint_atom2
+_restraint_distance
+C1  C2  1.54
+C2  C3  1.54
+save_
+
+loop_
+_atom_site_label
+_atom_site_type_symbol
+_atom_site_fract_x
+C1  C  0.123
+C2  C  0.234
+C3  C  0.345
+
+data_block2
+_entry_id 'second_block'
+_title 'Second Data Block'
+_value_text 'text value'
+_value_numeric 42.0
+_value_unknown ?
+_value_not_applicable .
