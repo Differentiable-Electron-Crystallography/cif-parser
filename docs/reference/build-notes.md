@@ -77,19 +77,18 @@ manifest-path = "../Cargo.toml"
 
 **Development Workflow:**
 ```bash
-cd python
-maturin develop          # Editable install, creates .so in src/
-pytest tests/            # Run tests
-maturin build --release  # Create wheel in target/wheels/
+just python-develop      # Editable install, creates .so in src/
+just python-test         # Run tests
+just python-build        # Create wheel in target/wheels/
 ```
 
 ### 3. JavaScript Nested Builds
 
 **Configuration:**
 ```bash
-wasm-pack build --target nodejs --out-dir javascript/pkg-node
-wasm-pack build --target web --out-dir javascript/pkg
-wasm-pack build --target bundler --out-dir javascript/pkg-bundler
+just wasm-build          # Build for Node.js (--target nodejs --out-dir javascript/pkg-node)
+just wasm-build-web      # Build for web (--target web --out-dir javascript/pkg)
+just wasm-build-bundler  # Build for bundler (--target bundler --out-dir javascript/pkg-bundler)
 ```
 
 **Why Nested Layout:**
@@ -348,8 +347,8 @@ find . -name "*.pyd" -delete
 find . -name "*.dll" -delete
 
 # 5. Rebuild
-maturin develop
-pytest tests/
+just python-develop
+just python-test
 ```
 
 ### From Root-Level to Nested (JavaScript)
@@ -370,7 +369,7 @@ rm -rf pkg-node pkg pkg-bundler
 # Change: /pkg-node/ → /javascript/pkg-node/
 
 # 5. Rebuild
-wasm-pack build --target nodejs --out-dir javascript/pkg-node
+just wasm-build
 ```
 
 ## Troubleshooting
@@ -403,9 +402,8 @@ ImportError: No module named 'cif_parser'
 
 **Fix:**
 ```bash
-cd python
 pip uninstall cif-parser -y
-maturin develop
+just python-develop
 ```
 
 ### JavaScript: WASM Not Found

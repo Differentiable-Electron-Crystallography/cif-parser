@@ -72,7 +72,9 @@ Each Rust AST type is wrapped in a corresponding Python class that provides a Py
 ### Compilation Flow
 
 ```
-User runs: maturin develop --features python
+User runs: just python-develop
+           ↓
+just → maturin develop (with python feature via uv)
            ↓
 Maturin → Cargo build (with python feature)
            ↓
@@ -839,16 +841,28 @@ features = ["pyo3/extension-module", "python"]
 - ⚠️ Opinionated project layout (but sensible)
 - ⚠️ Less flexible for complex custom builds
 
-**Commands:**
+**Commands (recommended - via just):**
 ```bash
 # Development
-maturin develop --features python
+just python-develop
 
 # Build wheel
-maturin build --release
+just python-build
+
+# Publish to PyPI (manual)
+cd python && uv run maturin publish
+```
+
+**Direct maturin commands (for reference):**
+```bash
+# Development
+cd python && uv run maturin develop
+
+# Build wheel
+cd python && uv run maturin build --release
 
 # Publish to PyPI
-maturin publish
+cd python && uv run maturin publish
 ```
 
 **Best for:** New projects, standard layouts, minimal configuration needs.
