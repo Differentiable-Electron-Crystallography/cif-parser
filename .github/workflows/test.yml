@@ -121,7 +121,7 @@ jobs:
 
       - name: Verify WASM loads
         run: |
-          cd pkg-node
+          cd javascript/pkg-node
           node -e "const cif = require('./cif_parser.js'); console.log('WASM module loaded successfully:', typeof cif.JsCifDocument);"
 
       - name: Run JavaScript tests
