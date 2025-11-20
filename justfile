@@ -73,13 +73,17 @@ python-lint-fix:
 python-typecheck:
     cd {{python_dir}} && uv run mypy .
 
-# Run Python tests
-python-test:
+# Install Python package in development mode (editable install)
+python-develop:
+    cd {{python_dir}} && maturin develop
+
+# Run Python tests (builds extension first)
+python-test: python-develop
     cd {{python_dir}} && uv run pytest tests/ -q
 
 # Clean Python build artifacts and compiled extensions
 python-clean:
-    python -c "import pathlib; [p.unlink() for pattern in ['*.so', '*.pyd', '*.dll'] for p in pathlib.Path('{{python_dir}}/cif_parser').glob(pattern) if p.exists()]"
+    python -c "import pathlib, sys; files = [p for pattern in ['*.so', '*.pyd', '*.dll'] for p in pathlib.Path('{{python_dir}}/cif_parser').glob(pattern)]; [print(f'Removing {p}') or p.unlink() for p in files] if files else print('No build artifacts to clean')"
 
 # Build Python package with maturin
 python-build: python-clean
