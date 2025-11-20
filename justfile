@@ -83,7 +83,10 @@ python-test: python-develop
 
 # Clean Python build artifacts and compiled extensions
 python-clean:
-    python -c "import pathlib, sys; files = [p for pattern in ['*.so', '*.pyd', '*.dll'] for p in pathlib.Path('{{python_dir}}/cif_parser').glob(pattern)]; [print(f'Removing {p}') or p.unlink() for p in files] if files else print('No build artifacts to clean')"
+    python -c "import pathlib, sys; files = [p for pattern in ['*.so', '*.pyd', '*.dll'] for p in pathlib.Path('{{python_dir}}/src/cif_parser').glob(pattern)]; [print(f'Removing {p}') or p.unlink() for p in files] if files else print('No build artifacts to clean')"
+    @if [ -d "target/maturin" ]; then rm -rf target/maturin && echo "Removed target/maturin directory"; fi
+    @if [ -d "{{python_dir}}/dist" ]; then rm -rf {{python_dir}}/dist && echo "Removed {{python_dir}}/dist directory"; fi
+    @if [ -d "{{python_dir}}/build" ]; then rm -rf {{python_dir}}/build && echo "Removed {{python_dir}}/build directory"; fi
 
 # Build Python package with maturin
 python-build: python-clean
@@ -99,15 +102,15 @@ check-python: python-fmt-check python-lint python-typecheck python-test
 
 # Build WASM package for Node.js (required for JS tests)
 wasm-build:
-    wasm-pack build --target nodejs --out-dir {{js_dir}}/pkg-node
+    wasm-pack build --target nodejs --out-dir pkg-node
 
 # Build WASM package for web
 wasm-build-web:
-    wasm-pack build --target web --out-dir {{js_dir}}/pkg
+    wasm-pack build --target web --out-dir pkg
 
 # Build WASM package for bundler
 wasm-build-bundler:
-    wasm-pack build --target bundler --out-dir {{js_dir}}/pkg-bundler
+    wasm-pack build --target bundler --out-dir pkg-bundler
 
 # Build all WASM targets
 wasm-build-all: wasm-build wasm-build-web wasm-build-bundler

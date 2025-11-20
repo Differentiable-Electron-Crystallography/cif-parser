@@ -44,7 +44,7 @@ dev = ["pytest>=6.0", "pytest-benchmark", "mypy", "black", "ruff", "maturin>=1.0
 
 [tool.maturin]
 features = ["pyo3/extension-module", "python"]
-python-source = "."
+python-source = "src"
 module-name = "cif_parser._cif_parser"
 manifest-path = "../Cargo.toml"
 

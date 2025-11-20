@@ -8,7 +8,7 @@
  *   node node-example.js
  */
 
-const { parse, version, author } = require('../pkg-node/cif_parser.js');
+const { parse, version, author } = require('../../pkg-node/cif_parser.js');
 
 // Example CIF content
 const cifContent = `
