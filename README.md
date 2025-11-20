@@ -34,7 +34,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         data_example
         _cell.length_a   10.000
         _cell.length_b   10.000
-        
+
         loop_
         _atom_site.label
         _atom_site.x
@@ -43,15 +43,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         C1  0.123  0.456  0.789
         N1  0.234  0.567  0.890
     "#;
-    
+
     let doc = Document::parse(cif_content)?;
     let block = doc.first_block().unwrap();
-    
+
     // Access single values
     if let Some(cell_a) = block.get_item("_cell.length_a") {
         println!("Cell a: {:?}", cell_a.as_numeric());
     }
-    
+
     // Access loop data
     if let Some(atom_loop) = block.find_loop("_atom_site.label") {
         for i in 0..atom_loop.len() {
@@ -60,7 +60,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             println!("Atom {}: {:?}", i, label);
         }
     }
-    
+
     Ok(())
 }
 ```
@@ -316,7 +316,7 @@ value.is_not_applicable    # True if not applicable (.)
 
 # Value access
 value.text                 # Text content (or None)
-value.numeric              # Numeric content (or None)  
+value.numeric              # Numeric content (or None)
 value.value_type           # Type as string
 value.to_python()          # Convert to native Python type
 ```
@@ -366,16 +366,16 @@ if block:
 uv tool install maturin
 
 # Build in development mode (faster, includes debug info)
-maturin develop --features python
+cd python && maturin develop
 
 # Build optimized wheel for distribution
-maturin build --features python --release
+cd python && maturin build --release
 
 # Test the installation
 source .venv/bin/activate && python python_example.py
 
 # Run tests
-python -m pytest tests/
+cd python && python -m pytest tests/
 
 # Type checking
 mypy python/cif_parser/
@@ -383,6 +383,24 @@ mypy python/cif_parser/
 # Linting and formatting
 ruff check python/
 black python/
+```
+
+## Project Structure
+
+```
+cif-parser/
+├── src/                          # Core Rust library
+│   ├── lib.rs                   # Main library
+│   ├── python.rs                # Python bindings (PyO3)
+│   └── wasm.rs                  # WebAssembly bindings
+├── python/                       # Python package (self-contained)
+│   ├── pyproject.toml           # Python packaging config
+│   ├── cif_parser/              # Pure Python wrapper
+│   └── tests/                   # Python tests
+└── javascript/                   # JavaScript/WASM package (self-contained)
+    ├── package.json             # NPM package config
+    ├── examples/                # Usage examples
+    └── tests/                   # JavaScript tests
 ```
 
 ## Building from Source
@@ -406,10 +424,10 @@ cargo build --release
 pip install maturin
 
 # Build and install in development mode
-maturin develop --features python
+cd python && maturin develop
 
 # Or build wheels for distribution
-maturin build --features python --release
+cd python && maturin build --release
 ```
 
 **WebAssembly packages:**
@@ -418,13 +436,13 @@ maturin build --features python --release
 curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
 
 # Build for web browsers
-wasm-pack build --target web --out-dir pkg
+wasm-pack build --target web --out-dir javascript/pkg
 
 # Build for Node.js
-wasm-pack build --target nodejs --out-dir pkg-node
+wasm-pack build --target nodejs --out-dir javascript/pkg-node
 
 # Build for bundlers (webpack, etc.)
-wasm-pack build --target bundler --out-dir pkg-bundler
+wasm-pack build --target bundler --out-dir javascript/pkg-bundler
 ```
 
 ### Running Examples
@@ -438,22 +456,22 @@ cargo run --example basic_usage
 
 **Python example:**
 ```bash
-# After: maturin develop --features python
+# After: cd python && maturin develop
 python python_example.py
 ```
 
 **Node.js example:**
 ```bash
-# After: wasm-pack build --target nodejs --out-dir pkg-node
-node node-example.js
+# After: wasm-pack build --target nodejs --out-dir javascript/pkg-node
+node javascript/examples/node-example.js
 ```
 
 **Web example:**
 ```bash
-# After: wasm-pack build --target web --out-dir pkg
-# Serve wasm-demo.html with any HTTP server:
+# After: wasm-pack build --target web --out-dir javascript/pkg
+# Serve the examples directory with any HTTP server:
 python -m http.server 8000
-# Open http://localhost:8000/wasm-demo.html
+# Open http://localhost:8000/javascript/examples/browser-basic.html
 ```
 
 ## WebAssembly (WASM) Usage
@@ -472,14 +490,16 @@ curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
 
 ```bash
 # Build for web browsers
-wasm-pack build --target web --out-dir pkg
+wasm-pack build --target web --out-dir javascript/pkg
 
 # Build for Node.js
-wasm-pack build --target nodejs --out-dir pkg-node
+wasm-pack build --target nodejs --out-dir javascript/pkg-node
 
 # Build for bundlers (webpack, etc.)
-wasm-pack build --target bundler --out-dir pkg-bundler
+wasm-pack build --target bundler --out-dir javascript/pkg-bundler
 ```
+
+For detailed JavaScript/TypeScript usage, examples, and API reference, see [javascript/README.md](javascript/README.md).
 
 ### JavaScript/TypeScript Usage
 
@@ -496,39 +516,39 @@ After building, you can use the CIF parser in your JavaScript/TypeScript project
 </head>
 <body>
     <script type="module">
-        import init, { JsCifDocument } from './pkg/cif_parser.js';
-        
+        import init, { parse } from './javascript/pkg/cif_parser.js';
+
         async function run() {
             // Initialize the WASM module
             await init();
-            
+
             // Parse CIF content
             const cifContent = `
                 data_example
                 _cell_length_a 10.000
                 _cell_length_b 20.000
-                
+
                 loop_
                 _atom_site_label
                 _atom_site_x
                 C1 0.123
                 N1 0.456
             `;
-            
+
             try {
-                const doc = JsCifDocument.parse(cifContent);
+                const doc = parse(cifContent);
                 console.log(`Parsed ${doc.get_block_count()} blocks`);
-                
+
                 const block = doc.get_first_block();
                 if (block) {
                     console.log(`Block name: ${block.name}`);
-                    
+
                     // Get a data item
                     const cellA = block.get_item('_cell_length_a');
                     if (cellA && cellA.is_numeric()) {
                         console.log(`Cell a: ${cellA.numeric_value}`);
                     }
-                    
+
                     // Access loop data
                     const loop = block.get_loop(0);
                     if (loop) {
@@ -543,7 +563,7 @@ After building, you can use the CIF parser in your JavaScript/TypeScript project
                 console.error('Parsing failed:', error);
             }
         }
-        
+
         run();
     </script>
 </body>
@@ -553,7 +573,7 @@ After building, you can use the CIF parser in your JavaScript/TypeScript project
 #### With Node.js
 
 ```javascript
-const { JsCifDocument } = require('./pkg-node/cif_parser.js');
+const { parse } = require('./javascript/pkg-node/cif_parser.js');
 
 const cifContent = `
     data_example
@@ -562,15 +582,15 @@ const cifContent = `
 `;
 
 try {
-    const doc = JsCifDocument.parse(cifContent);
+    const doc = parse(cifContent);
     const block = doc.get_first_block();
-    
+
     console.log('Block name:', block.name);
     console.log('Items:', block.get_item_keys());
-    
+
     const author = block.get_item('_author_name');
     console.log('Author:', author.text_value);
-    
+
 } catch (error) {
     console.error('Error:', error);
 }
@@ -579,45 +599,44 @@ try {
 #### With Webpack/Bundlers
 
 ```typescript
-import init, { JsCifDocument } from 'cif-parser';
+import init, { parse } from '@cif-parser/core';
 
 async function parseCif(content: string) {
     await init();
-    
-    const doc = JsCifDocument.parse(content);
+    const doc = parse(content);
     return doc;
 }
 ```
 
 ### WASM API Reference
 
-The WebAssembly API provides JavaScript-friendly wrappers:
+The WebAssembly API provides JavaScript-friendly wrappers with both property getters (modern API) and method aliases (compatibility).
+
+**Module Functions:**
+- `parse(content: string): JsCifDocument` - Parse CIF content (convenience function)
+- `version(): string` - Get library version
 
 #### `JsCifDocument`
-- `static parse(content: string): JsCifDocument` - Parse CIF content
-- `get_block_count(): number` - Number of data blocks
+- **Properties**: `blockCount`, `blockNames`
+- `parse(content: string): JsCifDocument` - Static: parse CIF content
 - `get_block(index: number): JsCifBlock | undefined` - Get block by index
 - `get_block_by_name(name: string): JsCifBlock | undefined` - Get block by name
-- `get_first_block(): JsCifBlock | undefined` - Get first block
-- `get_block_names(): string[]` - Get all block names
+- `first_block(): JsCifBlock | undefined` - Get first block
 
 #### `JsCifBlock`
-- `name: string` - Block name
-- `get_item_keys(): string[]` - All data item keys
+- **Properties**: `name`, `itemKeys`, `numLoops`, `numFrames`
 - `get_item(key: string): JsCifValue | undefined` - Get data item
-- `get_loop_count(): number` - Number of loops
 - `get_loop(index: number): JsCifLoop | undefined` - Get loop by index
 - `find_loop(tag: string): JsCifLoop | undefined` - Find loop containing tag
-- `get_frame_count(): number` - Number of save frames
+- `get_loop_tags(): string[]` - Get all loop tags
 - `get_frame(index: number): JsCifFrame | undefined` - Get save frame
 
 #### `JsCifLoop`
-- `get_tags(): string[]` - Column headers
-- `get_row_count(): number` - Number of rows
-- `get_column_count(): number` - Number of columns
+- **Properties**: `tags`, `numRows`, `numColumns`
 - `get_value(row: number, col: number): JsCifValue | undefined` - Get value by position
 - `get_value_by_tag(row: number, tag: string): JsCifValue | undefined` - Get value by tag
-- `get_column(tag: string): string | undefined` - Get entire column as JSON
+- `get_column(tag: string): JsCifValue[] | undefined` - Get entire column as array
+- `get_row_dict(row: number): object` - Get row as JavaScript object
 
 #### `JsCifValue`
 - `value_type: string` - "Text", "Numeric", "Unknown", or "NotApplicable"
@@ -641,24 +660,25 @@ The WebAssembly API provides JavaScript-friendly wrappers:
 After building with `wasm-pack`, you'll get:
 
 ```
-pkg/                          # Web browser package
-├── cif_parser.js            # JavaScript bindings
-├── cif_parser.d.ts          # TypeScript definitions
-├── cif_parser_bg.wasm       # Compiled WebAssembly binary
-├── cif_parser_bg.wasm.d.ts  # WASM type definitions
-└── package.json             # NPM package metadata
+javascript/pkg/                   # Web browser package
+├── cif_parser.js                # JavaScript bindings
+├── cif_parser.d.ts              # TypeScript definitions
+├── cif_parser_bg.wasm           # Compiled WebAssembly binary
+├── cif_parser_bg.wasm.d.ts      # WASM type definitions
+└── package.json                 # NPM package metadata
 
-pkg-node/                    # Node.js package (CommonJS)
-pkg-bundler/                 # Bundler package (webpack, etc.)
+javascript/pkg-node/             # Node.js package (CommonJS)
+javascript/pkg-bundler/          # Bundler package (webpack, etc.)
 ```
 
 ### Live Examples
 
-This repository includes working examples:
+This repository includes working examples in `javascript/examples/`:
 
-- **`wasm-demo.html`** - Interactive web demo with full parsing visualization
+- **`browser-basic.html`** - Interactive web demo with full parsing visualization
 - **`node-example.js`** - Complete Node.js usage example with detailed output
-- **Examples in README** - Copy-paste ready code snippets
+- **`typescript-example.ts`** - TypeScript example showing full type safety
+- See [javascript/README.md](javascript/README.md) for more details
 
 ### Performance Considerations
 
@@ -678,7 +698,7 @@ The generated WASM packages can be published to NPM:
 # Publish web version
 cd pkg && npm publish
 
-# Publish Node.js version  
+# Publish Node.js version
 cd pkg-node && npm publish --tag nodejs
 
 # Or publish both as scoped packages
@@ -695,7 +715,7 @@ For web applications, you can serve the WASM files from a CDN:
     // Load from your CDN
     import init, { JsCifDocument } from 'https://cdn.yoursite.com/cif-parser/cif_parser.js';
     await init('https://cdn.yoursite.com/cif-parser/cif_parser_bg.wasm');
-    
+
     const doc = JsCifDocument.parse(cifContent);
 </script>
 ```
@@ -708,20 +728,20 @@ import { useEffect, useState } from 'react';
 
 function CifParser() {
     const [parser, setParser] = useState(null);
-    
+
     useEffect(() => {
         import('./pkg/cif_parser.js').then(async (module) => {
             await module.default();
             setParser(module);
         });
     }, []);
-    
+
     const parseCif = (content) => {
         if (parser) {
             return parser.JsCifDocument.parse(content);
         }
     };
-    
+
     // ... rest of component
 }
 ```
@@ -733,13 +753,13 @@ import { ref, onMounted } from 'vue';
 export default {
     setup() {
         const parser = ref(null);
-        
+
         onMounted(async () => {
             const module = await import('./pkg/cif_parser.js');
             await module.default();
             parser.value = module;
         });
-        
+
         return { parser };
     }
 }
@@ -754,7 +774,7 @@ import { Injectable } from '@angular/core';
 })
 export class CifParserService {
     private parser: any = null;
-    
+
     async initialize() {
         if (!this.parser) {
             const module = await import('./assets/pkg/cif_parser.js');
@@ -763,7 +783,7 @@ export class CifParserService {
         }
         return this.parser;
     }
-    
+
     async parse(content: string) {
         const parser = await this.initialize();
         return parser.JsCifDocument.parse(content);
@@ -863,26 +883,89 @@ The library provides detailed error messages for:
 
 Contributions are welcome! Please feel free to submit issues or pull requests.
 
-### Setting up Git Hooks
+### Development Setup
 
-This project includes pre-commit hooks that run the same checks as our CI pipeline. To install them:
+#### Installing Git Hooks (Required)
+
+This project uses git hooks to ensure code quality before commits. **Please install them as part of your development setup:**
 
 ```bash
-# Install the git hooks (run from project root)
+# From project root
 ./install-hooks.sh
 ```
 
-The pre-commit hook will automatically:
-- Check code formatting with `cargo fmt`
-- Run linting with `cargo clippy`
-- Build the project
-- Run all tests
-- Build documentation
+This will configure git to run formatting and linting checks automatically before each commit for:
+- **Rust:** formatting (cargo fmt) and linting (clippy)
+- **Python:** formatting (black), linting (ruff), and type checking (mypy)
+- **JavaScript:** formatting and linting (biome)
 
-To bypass the hooks temporarily (not recommended), use:
+If you need to commit without running hooks (not recommended), use:
 ```bash
 git commit --no-verify
 ```
+
+### Code Quality
+
+This project enforces code quality through formatters and linters for all three languages. **All checks run automatically in CI** via GitHub Actions and in local git hooks.
+
+#### Running Formatters and Linters Manually
+
+**Rust:**
+```bash
+# Format code
+cargo fmt
+
+# Check formatting
+cargo fmt -- --check
+
+# Run linter
+cargo clippy --all-features
+```
+
+**Python:**
+```bash
+cd python
+
+# First time: install dependencies
+uv pip install -e ".[dev]"
+
+# Format code
+uv run black .
+
+# Check formatting
+uv run black --check .
+
+# Lint code
+uv run ruff check .
+uv run ruff check --fix .  # Auto-fix issues
+
+# Type check
+uv run mypy .
+```
+
+**JavaScript/TypeScript:**
+```bash
+cd javascript
+
+# First time: install dependencies
+npm install
+
+# Format and lint
+npm run check           # Check only
+npm run check:write     # Check and auto-fix
+
+# Or use biome directly
+npx @biomejs/biome check .
+npx @biomejs/biome check --write .
+```
+
+#### CI/CD
+
+All formatting and linting checks run automatically in GitHub Actions on every push and pull request:
+- **`lint-and-format.yml`** - Runs formatters and linters for all languages in parallel
+- **`test.yml`** - Runs builds and tests
+
+Both workflows run concurrently for fast feedback.
 
 ## License
 

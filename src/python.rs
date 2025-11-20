@@ -4,7 +4,7 @@
 //! functionality, following Python naming conventions and idioms.
 
 use crate::{CifBlock, CifDocument, CifError, CifFrame, CifLoop, CifValue};
-use pyo3::exceptions::{PyIOError, PyValueError};
+use pyo3::exceptions::{PyIOError, PyIndexError, PyKeyError, PyTypeError, PyValueError};
 use pyo3::prelude::*;
 use pyo3::types::PyString;
 use std::collections::HashMap;
@@ -14,8 +14,15 @@ fn cif_error_to_py_err(err: CifError) -> PyErr {
     match err {
         CifError::ParseError(msg) => PyValueError::new_err(format!("Parse error: {msg}")),
         CifError::IoError(err) => PyIOError::new_err(format!("IO error: {err}")),
-        CifError::InvalidStructure(msg) => {
-            PyValueError::new_err(format!("Invalid CIF structure: {msg}"))
+        CifError::InvalidStructure { message, location } => {
+            if let Some((line, col)) = location {
+                PyValueError::new_err(format!(
+                    "Invalid structure at line {}, col {}: {}",
+                    line, col, message
+                ))
+            } else {
+                PyValueError::new_err(format!("Invalid CIF structure: {message}"))
+            }
         }
     }
 }
@@ -186,15 +193,16 @@ impl PyLoop {
     }
 
     /// Python iterator protocol
-    fn __iter__(slf: PyRef<'_, Self>) -> PyRef<'_, Self> {
-        slf
-    }
-
-    /// Python iterator next
-    fn __next__(&mut self) -> Option<Vec<PyValue>> {
-        // Note: This is a simple implementation. For a real iterator,
-        // you'd want to maintain state in the struct
-        None
+    fn __iter__(slf: PyRef<'_, Self>) -> PyResult<Py<PyLoopIterator>> {
+        let py = slf.py();
+        let loop_clone = slf.clone();
+        Py::new(
+            py,
+            PyLoopIterator {
+                loop_: Py::new(py, loop_clone)?,
+                index: 0,
+            },
+        )
     }
 
     /// String representation
@@ -219,6 +227,42 @@ impl PyLoop {
 impl From<CifLoop> for PyLoop {
     fn from(loop_: CifLoop) -> Self {
         PyLoop { inner: loop_ }
+    }
+}
+
+/// Iterator for PyLoop that yields row dictionaries
+#[pyclass]
+struct PyLoopIterator {
+    loop_: Py<PyLoop>,
+    index: usize,
+}
+
+#[pymethods]
+impl PyLoopIterator {
+    fn __iter__(slf: PyRef<'_, Self>) -> PyRef<'_, Self> {
+        slf
+    }
+
+    fn __next__(mut slf: PyRefMut<'_, Self>) -> Option<HashMap<String, PyValue>> {
+        let py = slf.py();
+        let current_index = slf.index;
+
+        // Get the row dict in a scope so the borrow is dropped before we mutate slf.index
+        let result = {
+            let loop_ = slf.loop_.borrow(py);
+            if current_index < loop_.inner.len() {
+                loop_.get_row_dict(current_index)
+            } else {
+                None
+            }
+        };
+
+        // Now we can safely increment index after the borrow is dropped
+        if result.is_some() {
+            slf.index += 1;
+        }
+
+        result
     }
 }
 
@@ -476,19 +520,32 @@ impl PyDocument {
 
     /// Python getitem protocol (allows doc[0], doc["name"])
     fn __getitem__(&self, key: &Bound<'_, PyAny>) -> PyResult<PyBlock> {
-        if let Ok(index) = key.extract::<usize>() {
+        // Try to extract as signed integer first to handle negative indices
+        if let Ok(index) = key.extract::<isize>() {
+            let len = self.inner.blocks.len() as isize;
+            let actual_index = if index < 0 {
+                // Python-style negative indexing
+                let positive_index = len + index;
+                if positive_index < 0 {
+                    return Err(PyIndexError::new_err("Block index out of range"));
+                }
+                positive_index as usize
+            } else {
+                index as usize
+            };
+
             self.inner
                 .blocks
-                .get(index)
+                .get(actual_index)
                 .map(|b| b.clone().into())
-                .ok_or_else(|| PyValueError::new_err("Block index out of range"))
+                .ok_or_else(|| PyIndexError::new_err("Block index out of range"))
         } else if let Ok(name) = key.extract::<String>() {
             self.inner
                 .get_block(&name)
                 .map(|b| b.clone().into())
-                .ok_or_else(|| PyValueError::new_err(format!("Block '{name}' not found")))
+                .ok_or_else(|| PyKeyError::new_err(format!("Block '{name}' not found")))
         } else {
-            Err(PyValueError::new_err("Block key must be int or str"))
+            Err(PyTypeError::new_err("Block key must be int or str"))
         }
     }
 
@@ -535,6 +592,7 @@ fn _cif_parser(_py: Python, m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PyDocumentIterator>()?;
     m.add_class::<PyBlock>()?;
     m.add_class::<PyLoop>()?;
+    m.add_class::<PyLoopIterator>()?;
     m.add_class::<PyFrame>()?;
     m.add_class::<PyValue>()?;
 

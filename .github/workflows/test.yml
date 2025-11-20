@@ -18,15 +18,19 @@ jobs:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
         rust: [stable, beta]
-    
+
     steps:
       - uses: actions/checkout@v4
-      
+
+      - name: Install just
+        uses: extractions/setup-just@v2
+
       - name: Install Rust
         uses: dtolnay/rust-toolchain@master
         with:
           toolchain: ${{ matrix.rust }}
-      
+          components: rustfmt, clippy
+
       - name: Cache cargo
         uses: actions/cache@v4
         with:
@@ -35,25 +39,21 @@ jobs:
             ~/.cargo/git
             target
           key: ${{ runner.os }}-cargo-${{ matrix.rust }}-${{ hashFiles('**/Cargo.lock') }}
-      
+
       - name: Check formatting
         if: matrix.rust == 'stable' && matrix.os == 'ubuntu-latest'
-        run: |
-          rustup component add rustfmt
-          cargo fmt -- --check
-      
+        run: just rust-fmt-check
+
       - name: Run clippy
         if: matrix.rust == 'stable'
-        run: |
-          rustup component add clippy
-          cargo clippy --all-features -- -D warnings
-      
+        run: just rust-clippy
+
       - name: Build
-        run: cargo build --verbose --all-features
-      
+        run: just rust-build
+
       - name: Run tests
-        run: cargo test --verbose --all-features
-      
+        run: just rust-test
+
       - name: Build documentation
         if: matrix.rust == 'stable' && matrix.os == 'ubuntu-latest'
         run: cargo doc --no-deps --all-features
@@ -65,63 +65,64 @@ jobs:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
         python-version: ['3.8', '3.9', '3.10', '3.11', '3.12']
-    
+
     steps:
       - uses: actions/checkout@v4
-      
+
+      - name: Install just
+        uses: extractions/setup-just@v2
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
-      
+
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
-      
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install maturin pytest
-      
-      - name: Build Python package
-        run: |
-          # Build wheel and install it instead of using develop
-          maturin build --features python --out dist
-      
-      - name: Install Python package
-        run: |
-          # Install all wheel files in dist directory (cross-platform)
-          python -m pip install dist/*.whl
-        shell: bash  # Force bash on Windows to handle glob patterns
-      
+
+      - name: Install UV
+        uses: astral-sh/setup-uv@v4
+
       - name: Run Python tests
-        run: |
-          python -c "import cif_parser; print(cif_parser)"
-          # Add pytest tests when available
-          # pytest tests/
+        run: just python-test
 
   wasm-tests:
-    name: WASM Build Test
+    name: WASM and JavaScript Tests
     runs-on: ubuntu-latest
-    
+
     steps:
       - uses: actions/checkout@v4
-      
+
+      - name: Install just
+        uses: extractions/setup-just@v2
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
         with:
           targets: wasm32-unknown-unknown
-      
+
       - name: Install wasm-pack
         run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
-      
+
+      - name: Install JavaScript dependencies
+        working-directory: javascript
+        run: npm install
+
       - name: Build WASM for web
-        run: wasm-pack build --target web --out-dir pkg
-      
+        run: just wasm-build-web
+
       - name: Build WASM for Node.js
-        run: wasm-pack build --target nodejs --out-dir pkg-node
-      
-      - name: Test WASM with Node.js
+        run: just wasm-build
+
+      - name: Verify WASM loads
         run: |
-          cd pkg-node
-          # Test by requiring the actual module file, not the package name
+          cd javascript/pkg-node
           node -e "const cif = require('./cif_parser.js'); console.log('WASM module loaded successfully:', typeof cif.JsCifDocument);"
+
+      - name: Run JavaScript tests
+        run: just js-test

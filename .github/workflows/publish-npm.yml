@@ -10,84 +10,78 @@ jobs:
   build-and-publish:
     name: Build WASM and publish to NPM
     runs-on: ubuntu-latest
-    
+
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
         with:
           targets: wasm32-unknown-unknown
-      
+
+      - name: Install just
+        uses: extractions/setup-just@v2
+
       - name: Install wasm-pack
         run: |
           curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
-      
-      - name: Build for web (ES modules)
-        run: |
-          wasm-pack build --target web --out-dir pkg --release
-      
-      - name: Build for Node.js
-        run: |
-          wasm-pack build --target nodejs --out-dir pkg-node --release
-      
-      - name: Build for bundlers (webpack, etc.)
-        run: |
-          wasm-pack build --target bundler --out-dir pkg-bundler --release
-      
+
+      - name: Build all WASM targets
+        run: just wasm-build-all
+
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
           registry-url: 'https://registry.npmjs.org'
-      
+
       - name: Configure NPM packages
         run: |
           # Update package names to be scoped if needed
           # For the web package
-          cd pkg
+          cd javascript/pkg
           npm pkg set name="@cif-parser/web"
-          cd ..
-          
+          cd ../..
+
           # For the Node.js package
-          cd pkg-node
+          cd javascript/pkg-node
           npm pkg set name="@cif-parser/node"
-          cd ..
-          
+          cd ../..
+
           # For the bundler package
-          cd pkg-bundler
+          cd javascript/pkg-bundler
           npm pkg set name="@cif-parser/bundler"
-          cd ..
-      
+          cd ../..
+
       - name: Publish web package
         run: |
-          cd pkg
+          cd javascript/pkg
           npm publish --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         continue-on-error: true
-      
+
       - name: Publish Node.js package
         run: |
-          cd pkg-node
+          cd javascript/pkg-node
           npm publish --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         continue-on-error: true
-      
+
       - name: Publish bundler package
         run: |
-          cd pkg-bundler
+          cd javascript/pkg-bundler
           npm publish --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         continue-on-error: true
-      
+
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: npm-packages
           path: |
-            pkg/
-            pkg-node/
-            pkg-bundler/
+            javascript/pkg/
+            javascript/pkg-node/
+            javascript/pkg-bundler/
