@@ -74,7 +74,9 @@ Each Rust AST type is wrapped in a corresponding JavaScript class that provides 
 ### Compilation Flow
 
 ```
-User runs: wasm-pack build --target web --out-dir javascript/pkg
+User runs: just wasm-build-web
+           ↓
+just → wasm-pack build --target web --out-dir javascript/pkg
            ↓
 wasm-pack → cargo build --target wasm32-unknown-unknown
            ↓
@@ -382,6 +384,17 @@ crate-type = ["cdylib", "rlib"]
 
 ### NPM Package (javascript/package.json)
 
+**Note:** Use `just` commands for building. The NPM scripts are shown for reference but `just` is the recommended build system.
+
+**Recommended commands:**
+```bash
+just wasm-build-web       # Build for web
+just wasm-build           # Build for Node.js
+just wasm-build-bundler   # Build for bundlers
+just wasm-build-all       # Build all targets
+```
+
+**NPM scripts (for reference):**
 ```json
 {
   "name": "@cif-parser/core",
@@ -733,7 +746,7 @@ for (const content of cifFiles) {
 ### 1. Web (ES Modules)
 
 ```bash
-wasm-pack build --target web --out-dir javascript/pkg
+just wasm-build-web
 ```
 
 **Usage:**
@@ -754,7 +767,7 @@ wasm-pack build --target web --out-dir javascript/pkg
 ### 2. Node.js (CommonJS)
 
 ```bash
-wasm-pack build --target nodejs --out-dir javascript/pkg-node
+just wasm-build
 ```
 
 **Usage:**
@@ -767,7 +780,7 @@ const doc = parse(cifContent);  // No init() needed
 ### 3. Bundler (Webpack, Rollup, etc.)
 
 ```bash
-wasm-pack build --target bundler --out-dir javascript/pkg-bundler
+just wasm-build-bundler
 ```
 
 **Usage:**
@@ -784,7 +797,7 @@ const doc = parse(cifContent);
 
 **Optimized build:**
 ```bash
-wasm-pack build --release --target web
+just wasm-build-web  # Builds in release mode by default
 ```
 
 **Current size:** ~225KB (gzipped)
@@ -855,7 +868,7 @@ for (let i = 0; i < loop.numRows; i++) {
 
 ```bash
 # Build all targets
-npm run build:all
+just wasm-build-all
 
 # Publish to NPM
 cd javascript/pkg && npm publish --access public

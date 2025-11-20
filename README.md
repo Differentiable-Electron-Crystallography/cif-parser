@@ -363,26 +363,26 @@ if block:
 
 ```bash
 # Install development dependencies
-uv tool install maturin
+just setup
 
 # Build in development mode (faster, includes debug info)
-cd python && maturin develop
+just python-develop
 
 # Build optimized wheel for distribution
-cd python && maturin build --release
+just python-build
 
 # Test the installation
 source .venv/bin/activate && python python_example.py
 
 # Run tests
-cd python && python -m pytest tests/
+just python-test
 
 # Type checking
-mypy python/cif_parser/
+just python-typecheck
 
 # Linting and formatting
-ruff check python/
-black python/
+just python-lint
+just python-fmt
 ```
 
 ## Project Structure
@@ -408,41 +408,46 @@ cif-parser/
 ### Prerequisites
 
 - [Rust](https://rustup.rs/) 1.70.0 or later
-- For Python bindings: [maturin](https://maturin.rs/)
+- [just](https://github.com/casey/just) - Command runner (install: `cargo install just` or `brew install just`)
+- For Python bindings: Python 3.8+ and [uv](https://docs.astral.sh/uv/) (recommended)
 - For WASM bindings: [wasm-pack](https://rustwasm.github.io/wasm-pack/)
 
 ### Build Commands
 
+**Note:** This project uses `just` as a command runner for all build tasks. See [justfile](justfile) for all available commands.
+
 **Rust library:**
 ```bash
-cargo build --release
+just rust-build
 ```
 
 **Python package:**
 ```bash
-# Install maturin if not already installed
-pip install maturin
-
 # Build and install in development mode
-cd python && maturin develop
+just python-develop
 
 # Or build wheels for distribution
-cd python && maturin build --release
+just python-build
 ```
 
 **WebAssembly packages:**
 ```bash
-# Install wasm-pack if not already installed
-curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
-
 # Build for web browsers
-wasm-pack build --target web --out-dir javascript/pkg
+just wasm-build-web
 
 # Build for Node.js
-wasm-pack build --target nodejs --out-dir javascript/pkg-node
+just wasm-build
 
 # Build for bundlers (webpack, etc.)
-wasm-pack build --target bundler --out-dir javascript/pkg-bundler
+just wasm-build-bundler
+
+# Build all WASM targets
+just wasm-build-all
+```
+
+**Build all targets:**
+```bash
+just build-all
 ```
 
 ### Running Examples
@@ -456,19 +461,19 @@ cargo run --example basic_usage
 
 **Python example:**
 ```bash
-# After: cd python && maturin develop
+# After: just python-develop
 python python_example.py
 ```
 
 **Node.js example:**
 ```bash
-# After: wasm-pack build --target nodejs --out-dir javascript/pkg-node
+# After: just wasm-build
 node javascript/examples/node-example.js
 ```
 
 **Web example:**
 ```bash
-# After: wasm-pack build --target web --out-dir javascript/pkg
+# After: just wasm-build-web
 # Serve the examples directory with any HTTP server:
 python -m http.server 8000
 # Open http://localhost:8000/javascript/examples/browser-basic.html
@@ -490,13 +495,16 @@ curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
 
 ```bash
 # Build for web browsers
-wasm-pack build --target web --out-dir javascript/pkg
+just wasm-build-web
 
 # Build for Node.js
-wasm-pack build --target nodejs --out-dir javascript/pkg-node
+just wasm-build
 
 # Build for bundlers (webpack, etc.)
-wasm-pack build --target bundler --out-dir javascript/pkg-bundler
+just wasm-build-bundler
+
+# Build all targets
+just wasm-build-all
 ```
 
 For detailed JavaScript/TypeScript usage, examples, and API reference, see [javascript/README.md](javascript/README.md).
@@ -891,7 +899,7 @@ This project uses git hooks to ensure code quality before commits. **Please inst
 
 ```bash
 # From project root
-./install-hooks.sh
+just install-hooks
 ```
 
 This will configure git to run formatting and linting checks automatically before each commit for:
@@ -910,53 +918,70 @@ This project enforces code quality through formatters and linters for all three 
 
 #### Running Formatters and Linters Manually
 
+**Note:** Use `just` commands for all formatting and linting tasks.
+
 **Rust:**
 ```bash
 # Format code
-cargo fmt
+just rust-fmt
 
 # Check formatting
-cargo fmt -- --check
+just rust-fmt-check
 
 # Run linter
-cargo clippy --all-features
+just rust-clippy
+
+# Run all Rust checks
+just check-rust
 ```
 
 **Python:**
 ```bash
-cd python
-
-# First time: install dependencies
-uv pip install -e ".[dev]"
-
 # Format code
-uv run black .
+just python-fmt
 
 # Check formatting
-uv run black --check .
+just python-fmt-check
 
 # Lint code
-uv run ruff check .
-uv run ruff check --fix .  # Auto-fix issues
+just python-lint
+
+# Auto-fix linting issues
+just python-lint-fix
 
 # Type check
-uv run mypy .
+just python-typecheck
+
+# Run all Python checks
+just check-python
 ```
 
 **JavaScript/TypeScript:**
 ```bash
-cd javascript
+# Format code
+just js-fmt
 
-# First time: install dependencies
-npm install
+# Check formatting
+just js-fmt-check
 
-# Format and lint
-npm run check           # Check only
-npm run check:write     # Check and auto-fix
+# Lint code
+just js-lint
 
-# Or use biome directly
-npx @biomejs/biome check .
-npx @biomejs/biome check --write .
+# Check and auto-fix
+just js-check
+
+# Run all JavaScript checks
+just check-js
+```
+
+**Run all checks (CI mode):**
+```bash
+just ci
+```
+
+**Format all code:**
+```bash
+just fmt
 ```
 
 #### CI/CD
