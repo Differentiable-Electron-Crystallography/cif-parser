@@ -30,10 +30,10 @@ cif-parser/
 │   ├── examples/
 │   ├── tests/
 │   ├── package.json
-│   └── biome.json
-├── pkg-node/                      # WASM build output (Node.js)
-├── pkg/                           # WASM build output (web)
-├── pkg-bundler/                   # WASM build output (bundler)
+│   ├── biome.json
+│   ├── pkg-node/                  # WASM build output (Node.js)
+│   ├── pkg/                       # WASM build output (web)
+│   └── pkg-bundler/               # WASM build output (bundler)
 ├── target/                        # Rust build artifacts
 │   └── wheels/                    # Python wheels
 └── justfile                       # Build orchestration
@@ -50,7 +50,7 @@ cif-parser/
 
 **Solution:**
 - Python: **Src layout** (`python-source = "src"`)
-- JavaScript: **Root-level builds** (`--out-dir pkg-node`)
+- JavaScript: **Nested builds** (`--out-dir javascript/pkg-node`)
 
 ### 2. Python Src Layout
 
@@ -83,26 +83,27 @@ pytest tests/            # Run tests
 maturin build --release  # Create wheel in target/wheels/
 ```
 
-### 3. JavaScript Root-Level Builds
+### 3. JavaScript Nested Builds
 
 **Configuration:**
 ```bash
-wasm-pack build --target nodejs --out-dir pkg-node
-wasm-pack build --target web --out-dir pkg
-wasm-pack build --target bundler --out-dir pkg-bundler
+wasm-pack build --target nodejs --out-dir javascript/pkg-node
+wasm-pack build --target web --out-dir javascript/pkg
+wasm-pack build --target bundler --out-dir javascript/pkg-bundler
 ```
 
-**Why Root-Level:**
-- Standard wasm-pack convention
-- Avoids nesting issues in monorepos
-- Cleaner separation from JavaScript source
+**Why Nested Layout:**
+- Consistent with Python's nested structure (`python/src/`)
+- Clear organization in monorepo: each language has its own directory
+- Scales better when adding more targets
+- Isolates build artifacts from root-level project files
 - Already covered by `.gitignore` patterns
 
 **Build Process:**
 1. wasm-pack compiles Rust to WebAssembly
-2. Generates bindings in `pkg-node/`, `pkg/`, etc. at repo root
+2. Generates bindings in `javascript/pkg-node/`, `javascript/pkg/`, etc.
 3. Each target has its own package structure
-4. JavaScript tests import from `../pkg-node`
+4. JavaScript tests import from `./pkg-node` (same directory)
 
 **Development Workflow:**
 ```bash
@@ -197,9 +198,9 @@ cargo clean              # Standard Rust cleanup
 - **Cause:** Mixed layout with compiled extensions in source tree
 - **Solution:** Src layout separates source from artifacts
 
-**Issue 2: Nested pkg directories not ignored**
-- **Cause:** `.gitignore` patterns like `/pkg-node/` only match root
-- **Solution:** Build to root level, not `javascript/pkg-node/`
+**Issue 2: Build artifacts tracked by git**
+- **Cause:** Incorrect `.gitignore` patterns
+- **Solution:** Use proper nested patterns like `/javascript/pkg-node/`
 
 **Issue 3: Stale artifacts between builds**
 - **Cause:** Previous builds leaving files in source tree
@@ -248,23 +249,23 @@ This would exclude compiled extensions, but src layout naturally handles this.
 **`--target nodejs`:**
 - Generates Node.js-compatible module
 - Uses `require()` syntax
-- Output: `pkg-node/`
+- Output: `javascript/pkg-node/`
 
 **`--target web`:**
 - Generates ES module for web
 - Includes inline base64 WASM
-- Output: `pkg/`
+- Output: `javascript/pkg/`
 
 **`--target bundler`:**
 - Generates ES module for bundlers (webpack, rollup, vite)
 - Separate `.wasm` file
-- Output: `pkg-bundler/`
+- Output: `javascript/pkg-bundler/`
 
 ### Output Structure
 
 Each pkg directory contains:
 ```
-pkg-node/
+javascript/pkg-node/
 ├── cif_parser.js           # JS bindings
 ├── cif_parser.d.ts         # TypeScript types
 ├── cif_parser_bg.wasm      # WASM binary
@@ -281,11 +282,11 @@ pkg-node/
 # Rust build artifacts
 /target/
 
-# WASM generated packages (root-level builds)
-/pkg/
-/pkg-node/
-/pkg-bundler/
-/pkg-*/
+# WASM generated packages (nested builds)
+/javascript/pkg/
+/javascript/pkg-node/
+/javascript/pkg-bundler/
+/javascript/pkg-*/
 
 # Python generated packages
 /dist/
@@ -351,22 +352,25 @@ maturin develop
 pytest tests/
 ```
 
-### From Nested to Root-Level (JavaScript)
+### From Root-Level to Nested (JavaScript)
 
-If you have nested pkg builds:
+If you have root-level pkg builds:
 
 ```bash
-# 1. Remove nested builds
-rm -rf javascript/pkg-node javascript/pkg javascript/pkg-bundler
+# 1. Remove root-level builds
+rm -rf pkg-node pkg pkg-bundler
 
-# 2. Update build commands to use root-level --out-dir
-# Change: --out-dir javascript/pkg-node → --out-dir pkg-node
+# 2. Update build commands to use nested --out-dir
+# Change: --out-dir pkg-node → --out-dir javascript/pkg-node
 
 # 3. Update import paths in tests/examples
-# Change: require('./pkg-node') → require('../pkg-node')
+# Change: require('../pkg-node') → require('./pkg-node')
 
-# 4. Rebuild
-wasm-pack build --target nodejs --out-dir pkg-node
+# 4. Update .gitignore patterns
+# Change: /pkg-node/ → /javascript/pkg-node/
+
+# 5. Rebuild
+wasm-pack build --target nodejs --out-dir javascript/pkg-node
 ```
 
 ## Troubleshooting
@@ -408,22 +412,22 @@ maturin develop
 
 **Symptoms:**
 ```
-Error: Cannot find module '../pkg-node'
+Error: Cannot find module './pkg-node'
 ```
 
 **Cause:** Build output in wrong location
 
 **Fix:**
-1. Check `wasm-pack` command uses `--out-dir pkg-node` (not `javascript/pkg-node`)
+1. Check `wasm-pack` command uses `--out-dir javascript/pkg-node` (not root-level `pkg-node`)
 2. Rebuild: `just wasm-build`
-3. Verify `pkg-node/` exists at repo root
+3. Verify `javascript/pkg-node/` exists in the javascript directory
 
 ### General: Build Artifacts Tracked by Git
 
 **Symptoms:**
 ```bash
 git status
-# Shows: pkg-node/, *.so files, etc.
+# Shows: javascript/pkg-node/, *.so files, etc.
 ```
 
 **Fix:**
@@ -432,7 +436,7 @@ git status
 cat .gitignore
 
 # Force remove if needed
-git rm -r --cached pkg-node
+git rm -r --cached javascript/pkg-node
 git rm -r --cached "*.so"
 git commit -m "Remove build artifacts"
 ```

@@ -102,15 +102,15 @@ check-python: python-fmt-check python-lint python-typecheck python-test
 
 # Build WASM package for Node.js (required for JS tests)
 wasm-build:
-    wasm-pack build --target nodejs --out-dir pkg-node
+    wasm-pack build --target nodejs --out-dir javascript/pkg-node
 
 # Build WASM package for web
 wasm-build-web:
-    wasm-pack build --target web --out-dir pkg
+    wasm-pack build --target web --out-dir javascript/pkg
 
 # Build WASM package for bundler
 wasm-build-bundler:
-    wasm-pack build --target bundler --out-dir pkg-bundler
+    wasm-pack build --target bundler --out-dir javascript/pkg-bundler
 
 # Build all WASM targets
 wasm-build-all: wasm-build wasm-build-web wasm-build-bundler

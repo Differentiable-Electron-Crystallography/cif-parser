@@ -5,7 +5,7 @@
  */
 
 const assert = require('node:assert');
-const { parse, version } = require('../../pkg-node/cif_parser.js');
+const { parse, version } = require('../pkg-node/cif_parser.js');
 
 describe('CIF Parser Tests', () => {
   describe('Module', () => {

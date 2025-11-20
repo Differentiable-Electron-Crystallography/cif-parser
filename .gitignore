@@ -2,10 +2,10 @@
 /target/
 
 # WASM generated packages (wasm-pack output)
-/pkg/
-/pkg-node/
-/pkg-bundler/
-/pkg-*/
+/javascript/pkg/
+/javascript/pkg-node/
+/javascript/pkg-bundler/
+/javascript/pkg-*/
 
 # Python generated packages (maturin output)
 /dist/
